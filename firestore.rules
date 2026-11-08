@@ -53,10 +53,27 @@ service cloud.firestore {
       match /publishing/{recordId} {
         allow read, write: if isOwner(userId) || isAdmin();
       }
+      match /automation/{docId} {
+        allow read, write: if isOwner(userId) || isAdmin();
+      }
+      match /daily_jobs/{jobId} {
+        allow read, write: if isOwner(userId) || isAdmin();
+      }
       match /subscriptions/{subId} {
         allow read: if isOwner(userId) || isAdmin();
         allow write: if isAdmin();
       }
+    }
+
+    // Automation top-level collections (isolated by userId)
+    match /automation_configs/{configId} {
+      allow read, write: if isAuthenticated() && (isOwner(resource.data.userId) || isAdmin());
+      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+    }
+
+    match /automation_jobs/{jobId} {
+      allow read, write: if isAuthenticated() && (isOwner(resource.data.userId) || isAdmin());
+      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
     }
 
     // 2. Organizations & Memberships

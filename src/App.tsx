@@ -108,6 +108,7 @@ import { GoogleYouTubeConnectionCenter } from "./components/GoogleYouTubeConnect
 import { BetaFeedbackModal } from "./components/BetaFeedbackModal";
 import { OneClickVideoCreator } from "./components/OneClickVideoCreator";
 import { CloudAuthModal } from "./components/CloudAuthModal";
+import { MultiNicheAutomationPanel } from "./components/MultiNicheAutomationPanel";
 import { useAuth } from "./auth/AuthContext";
 import {
   getStoredResourceMode,
@@ -118,12 +119,13 @@ import {
 } from "./lib/resourceManager";
 import "./App.css";
 
-type View = "dashboard" | "agent" | "creator" | "projects" | "media" | "settings" | "providers" | "google_youtube" | "research" | "scripts" | "storyboard" | "visuals" | "voice" | "subtitles" | "audio" | "timeline" | "export" | "seo" | "publish" | "analytics" | "license" | "customer_saas" | "admin_saas";
+type View = "dashboard" | "automation" | "agent" | "creator" | "projects" | "media" | "settings" | "providers" | "google_youtube" | "research" | "scripts" | "storyboard" | "visuals" | "voice" | "subtitles" | "audio" | "timeline" | "export" | "seo" | "publish" | "analytics" | "license" | "customer_saas" | "admin_saas";
 type StorageState = "connecting" | "ready" | "error";
 export type UserMode = "beginner" | "creator" | "advanced";
 
 const URDU_NAV_LABELS: Record<string, string> = {
   Overview: "ڈیش بورڈ / جائزہ",
+  "Daily Automation": "خودکار روزانہ مواد",
   "AI Agent (Auto)": "خودکار اے آئی ایجنٹ",
   "Creator Workspace": "تخلیقی ورک اسپیس",
   "Google & YouTube": "گوگل و یوٹیوب سنٹر",
@@ -150,6 +152,7 @@ const URDU_NAV_LABELS: Record<string, string> = {
 
 const URDU_PAGE_TITLES: Record<string, string> = {
   dashboard: "ڈیش بورڈ اور جائزہ",
+  automation: "خودکار روزانہ ملٹی نیش مواد",
   agent: "خودکار یوٹیوب اے آئی ایجنٹ",
   creator: "تخلیقی ورک اسپیس اور چینلز",
   google_youtube: "گوگل و یوٹیوب سنٹر",
@@ -176,6 +179,7 @@ const URDU_PAGE_TITLES: Record<string, string> = {
 
 const navigation = [
   { label: "Overview", view: "dashboard" as const, icon: "grid" },
+  { label: "Daily Automation", view: "automation" as const, icon: "spark" },
   { label: "AI Agent (Auto)", view: "agent" as const, icon: "spark" },
   { label: "Creator Workspace", view: "creator" as const, icon: "spark" },
   { label: "Google & YouTube", view: "google_youtube" as const, icon: "spark" },
@@ -573,6 +577,8 @@ function App() {
   const englishPageTitle =
     view === "dashboard"
       ? "Overview"
+      : view === "automation"
+        ? "Multi-Tenant Multi-Niche Daily Automation"
       : view === "agent"
         ? "Autonomous YouTube AI Agent"
       : view === "creator"
@@ -1087,6 +1093,8 @@ function App() {
                 }
               }}
             />
+          ) : view === "automation" ? (
+            <MultiNicheAutomationPanel isUrdu={uiLanguage === "ur"} />
           ) : view === "agent" ? (
             <AgentStudioPage
               currentProjectId={selectedProjectId || projects[0]?.id || null}
