@@ -1,6 +1,6 @@
 [package]
 name = "ai-youtube-studio"
-version = "2.0.0"
+version = "2.0.1"
 description = "NovaVid AI YouTube Studio by LODHI TECHX"
 authors = ["LODHI TECHX"]
 edition = "2024"

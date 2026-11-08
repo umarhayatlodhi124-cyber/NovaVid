@@ -36,14 +36,14 @@ describe("Phase P: Final Production Release & General Availability Readiness", (
   // TASK 1: Release Candidate & Version Consistency
   // =========================================================================
   describe("Task 1: Version Consistency & Release Artifact Integrity", () => {
-    it("verifies application version is 2.0.0 consistently across package.json, tauri.conf.json, and Cargo.toml", () => {
+    it("verifies application version is consistent across package.json, tauri.conf.json, and Cargo.toml", () => {
       const pkg = JSON.parse(fs.readFileSync(pkgJsonPath, "utf8"));
       const tauri = JSON.parse(fs.readFileSync(tauriConfPath, "utf8"));
       const cargo = fs.readFileSync(cargoTomlPath, "utf8");
 
-      expect(pkg.version).toBe("2.0.0");
-      expect(tauri.version).toBe("2.0.0");
-      expect(cargo).toContain('version = "2.0.0"');
+      expect(pkg.version).toBe("2.0.1");
+      expect(tauri.version).toBe("2.0.1");
+      expect(cargo).toContain('version = "2.0.1"');
     });
 
     it("verifies desktop installer artifact exists and has verified size and SHA-256 hash", () => {
