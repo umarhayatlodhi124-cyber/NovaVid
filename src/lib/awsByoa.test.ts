@@ -17,6 +17,11 @@ import {
   removeAwsConnection,
   type AwsAccountConnection,
 } from "./awsByoaService";
+import {
+  OWNER_AWS_ACCOUNT_ID,
+  OWNER_AWS_REGION,
+  OWNER_CREDITS_USD,
+} from "../components/AwsConnectionCenter";
 
 describe("AWS CloudFormation Template Generator (BYOA Architecture)", () => {
   const options = {
@@ -220,5 +225,64 @@ describe("AWS BYOA Broker & Service Quota Service", () => {
     removeAwsConnection("test_tenant_xyz");
     const afterDelete = getStoredAwsConnection("test_tenant_xyz");
     expect(afterDelete).toBeNull();
+  });
+
+  describe("Owner Automated AWS Setup & Sydney ap-southeast-2 Configuration", () => {
+    it("should export correct verified owner constants for Lodhi TechX", () => {
+      expect(OWNER_AWS_ACCOUNT_ID).toBe("946935221857");
+      expect(OWNER_AWS_REGION).toBe("ap-southeast-2");
+      expect(OWNER_CREDITS_USD).toBe(120);
+      expect(DEFAULT_CONTROL_PLANE_ACCOUNT_ID).toBe("891377192456");
+      expect(OWNER_AWS_ACCOUNT_ID).not.toBe(DEFAULT_CONTROL_PLANE_ACCOUNT_ID);
+    });
+
+    it("should validate owner AWS Account ID and Role ARN correctly", () => {
+      expect(validateAwsAccountId(OWNER_AWS_ACCOUNT_ID)).toBe(true);
+      const ownerRoleArn = `arn:aws:iam::${OWNER_AWS_ACCOUNT_ID}:role/NovaVidExecutionRole-lodhi-techx`;
+      expect(validateAwsRoleArn(ownerRoleArn)).toBe(true);
+    });
+
+    it("should generate QuickCreate URL targeting Sydney ap-southeast-2 with pre-filled parameters", () => {
+      const extId = "novavid-lodhitechx-1a2b3c";
+      const sydneyUrl = buildQuickCreateStackUrl({
+        tenantId: "lodhi-techx",
+        externalId: extId,
+        awsRegion: OWNER_AWS_REGION,
+        stackName: "NovaVid-Execution-Stack",
+        controlPlaneAccountId: DEFAULT_CONTROL_PLANE_ACCOUNT_ID,
+      });
+
+      expect(sydneyUrl).toContain("https://console.aws.amazon.com/cloudformation/home");
+      expect(sydneyUrl).toContain("region=ap-southeast-2");
+      expect(sydneyUrl).toContain("stackName=NovaVid-Execution-Stack");
+      expect(sydneyUrl).toContain(`param_NovaVidControlPlaneAccountId=${DEFAULT_CONTROL_PLANE_ACCOUNT_ID}`);
+      expect(sydneyUrl).toContain(`param_TenantExternalId=${extId}`);
+      expect(sydneyUrl).toContain("param_TenantIdentifier=lodhi-techx");
+    });
+
+    it("should detect account ID mismatch when cross-account role ARN belongs to wrong account", async () => {
+      const mismatchedConn: AwsAccountConnection = {
+        tenantId: "lodhi-techx",
+        accountId: OWNER_AWS_ACCOUNT_ID, // 946935221857
+        roleArn: `arn:aws:iam::${DEFAULT_CONTROL_PLANE_ACCOUNT_ID}:role/NovaVidExecutionRole-lodhi-techx`, // Mismatch with 891377192456
+        externalId: "novavid-test-external-id",
+        region: OWNER_AWS_REGION,
+        bucketName: "novavid-lodhi-media",
+        status: "unconnected",
+        gpuQuota: {
+          instanceFamily: "G4dn",
+          quotaCode: "L-384A81E9",
+          quotaValue: 0,
+          sufficient: false,
+          message: "",
+        },
+        estimatedMonthlySpendUsd: 0,
+      };
+
+      const result = await verifyAwsCrossAccountAccess(mismatchedConn);
+      expect(result.success).toBe(false);
+      expect(result.status).toBe("INVALID_PARAMETERS");
+      expect(result.message).toContain("does not match Account ID");
+    });
   });
 });
