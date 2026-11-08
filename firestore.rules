@@ -15,6 +15,7 @@ service cloud.firestore {
       return isAuthenticated() && (
         request.auth.token.role == 'owner' ||
         request.auth.token.role == 'admin' ||
+        request.auth.token.email == 'umarhayatlodhi124@gmail.com' ||
         request.auth.token.email == 'umarhayatlodhi25@gmail.com'
       );
     }
@@ -23,11 +24,39 @@ service cloud.firestore {
       return isAuthenticated() && exists(/databases/$(database)/documents/organizations/$(orgId)/members/$(request.auth.uid));
     }
 
-    // 1. Users collection
+    // 1. Users collection & nested customer subcollections (Phase F Multi-Tenant Architecture)
     match /users/{userId} {
-      allow read, update: if isOwner(userId) || isAdmin();
+      allow read: if isOwner(userId) || isAdmin();
       allow create: if isAuthenticated() && request.auth.uid == userId;
+      // Prevent non-admins from self-elevating role, isOwner or plan
+      allow update: if (
+        isOwner(userId) &&
+        (!('role' in resource.data) || request.resource.data.role == resource.data.role) &&
+        (!('isOwner' in resource.data) || request.resource.data.isOwner == resource.data.isOwner) &&
+        (!('plan' in resource.data) || request.resource.data.plan == resource.data.plan)
+      ) || isAdmin();
       allow delete: if isAdmin();
+
+      // Nested customer subcollections (Phase F: Multi-Tenant Subcollections)
+      match /projects/{projectId} {
+        allow read, write: if isOwner(userId) || isAdmin();
+      }
+      match /scripts/{scriptId} {
+        allow read, write: if isOwner(userId) || isAdmin();
+      }
+      match /assets/{assetId} {
+        allow read, write: if isOwner(userId) || isAdmin();
+      }
+      match /settings/{settingId} {
+        allow read, write: if isOwner(userId) || isAdmin();
+      }
+      match /publishing/{recordId} {
+        allow read, write: if isOwner(userId) || isAdmin();
+      }
+      match /subscriptions/{subId} {
+        allow read: if isOwner(userId) || isAdmin();
+        allow write: if isAdmin();
+      }
     }
 
     // 2. Organizations & Memberships

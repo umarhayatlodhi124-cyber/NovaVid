@@ -104,6 +104,7 @@ export const CloudAuthModal: React.FC<CloudAuthModalProps> = ({
       await logoutFirebase();
       setSuccessMsg("Signed out from NovaVid Cloud.");
       onAuthSuccess();
+      onClose();
     } catch (err: any) {
       setError(err?.message || "Failed to sign out.");
     } finally {

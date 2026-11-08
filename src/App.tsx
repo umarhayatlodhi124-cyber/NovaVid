@@ -86,10 +86,8 @@ import {
   type ScriptFormat,
 } from "./lib/scripts";
 import {
-  auth,
   subscribeToAuthState,
 } from "./lib/firebase";
-import type { User } from "firebase/auth";
 import { VoiceStudioPage } from "./components/VoiceStudioPage";
 import { SubtitleStudioPage } from "./components/SubtitleStudioPage";
 import { TimelineStudioPage } from "./components/TimelineStudioPage";
@@ -110,6 +108,7 @@ import { GoogleYouTubeConnectionCenter } from "./components/GoogleYouTubeConnect
 import { BetaFeedbackModal } from "./components/BetaFeedbackModal";
 import { OneClickVideoCreator } from "./components/OneClickVideoCreator";
 import { CloudAuthModal } from "./components/CloudAuthModal";
+import { useAuth } from "./auth/AuthContext";
 import {
   getStoredResourceMode,
   setStoredResourceMode,
@@ -209,7 +208,7 @@ const plannedNavigation = [
 function App() {
   const [view, setView] = useState<View>("dashboard");
   const [projects, setProjects] = useState<Project[]>([]);
-  const [firebaseUser, setFirebaseUser] = useState<User | null>(auth.currentUser);
+  const { user: firebaseUser } = useAuth();
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [storageState, setStorageState] = useState<StorageState>("connecting");
   const [storageIssue, setStorageIssue] = useState<string | null>(null);
@@ -411,8 +410,7 @@ function App() {
   useEffect(() => {
     refreshProjects().catch(() => undefined);
     if (!isTauriEnvironment()) {
-      const unsub = subscribeToAuthState((u) => {
-        setFirebaseUser(u);
+      const unsub = subscribeToAuthState(() => {
         refreshProjects().catch(() => undefined);
       });
       return () => unsub();
@@ -954,15 +952,15 @@ function App() {
             <div
               className={`storage-indicator ${storageState}`}
               role="status"
-              onClick={() => !isTauriEnvironment() && setIsAuthModalOpen(true)}
-              style={!isTauriEnvironment() ? { cursor: "pointer" } : undefined}
+              onClick={() => setIsAuthModalOpen(true)}
+              style={{ cursor: "pointer" }}
               title={
                 storageState === "ready"
                   ? isTauriEnvironment()
-                    ? "Projects are stored in the local SQLite database"
+                    ? `Desktop SQLite Ready — Authenticated as ${firebaseUser?.email || "Creator"} (novavid-ecfc8). Click to manage.`
                     : firebaseUser
                       ? `Signed in as ${firebaseUser.email} — Cloud Firestore Synced (novavid-ecfc8). Click to manage.`
-                      : "Local Web Workspace — Guest projects stored on this device. Click to sign in and sync to Cloud."
+                      : "Connecting to project storage"
                   : "Connecting to project storage"
               }
             >
@@ -972,7 +970,7 @@ function App() {
                   ? "Local storage ready"
                   : firebaseUser
                     ? "Cloud synced"
-                    : "Guest (Local only)"
+                    : "Syncing..."
                 : storageState === "connecting"
                   ? "Connecting"
                   : "Storage unavailable"}
@@ -980,14 +978,12 @@ function App() {
             <div
               className="topbar-avatar"
               aria-label="Workspace profile"
-              onClick={() => !isTauriEnvironment() && setIsAuthModalOpen(true)}
-              style={!isTauriEnvironment() ? { cursor: "pointer" } : undefined}
+              onClick={() => setIsAuthModalOpen(true)}
+              style={{ cursor: "pointer" }}
               title={
                 firebaseUser?.email
-                  ? `Logged in as ${firebaseUser.email} — Click for Cloud Account options`
-                  : isTauriEnvironment()
-                    ? "Local Creator Profile"
-                    : "Guest Creator Profile — Click to Sign In"
+                  ? `Logged in as ${firebaseUser.email} — Click for Account & Cloud options`
+                  : "Workspace Profile — Click to Manage Account"
               }
             >
               {firebaseUser?.email ? firebaseUser.email[0].toUpperCase() : "U"}

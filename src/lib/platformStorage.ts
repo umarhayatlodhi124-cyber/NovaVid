@@ -185,6 +185,10 @@ export class WebFirestoreProjectStorage {
       try {
         const docRef = doc(db, "projects", project.id);
         await setDoc(docRef, cloudPayload);
+
+        // Also persist to nested multi-tenant path: users/{uid}/projects/{projectId}
+        const userProjectRef = doc(db, "users", user.uid, "projects", project.id);
+        await setDoc(userProjectRef, cloudPayload);
       } catch (err: any) {
         this.lastSyncError = err?.message || String(err);
         console.error("Cloud Firestore project creation failed:", err);
@@ -216,18 +220,15 @@ export class WebFirestoreProjectStorage {
 
     if (user?.uid) {
       try {
-        const docRef = doc(db, "projects", id);
-        await setDoc(
-          docRef,
-          {
-            name: input.name,
-            topic: input.topic,
-            language: input.language,
-            updated_at: now,
-            userId: user.uid,
-          },
-          { merge: true }
-        );
+        const updatePayload = {
+          name: input.name,
+          topic: input.topic,
+          language: input.language,
+          updated_at: now,
+          userId: user.uid,
+        };
+        await setDoc(doc(db, "projects", id), updatePayload, { merge: true });
+        await setDoc(doc(db, "users", user.uid, "projects", id), updatePayload, { merge: true });
       } catch (err: any) {
         this.lastSyncError = err?.message || String(err);
         console.error("Cloud Firestore update failed:", err);
@@ -265,8 +266,8 @@ export class WebFirestoreProjectStorage {
 
     if (user?.uid) {
       try {
-        const docRef = doc(db, "projects", id);
-        await deleteDoc(docRef);
+        await deleteDoc(doc(db, "projects", id));
+        await deleteDoc(doc(db, "users", user.uid, "projects", id));
       } catch (err: any) {
         this.lastSyncError = err?.message || String(err);
         console.error("Cloud Firestore delete failed:", err);

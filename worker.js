@@ -5,6 +5,19 @@ export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
 
+    // Preflight CORS support for API calls
+    if (request.method === "OPTIONS") {
+      return new Response(null, {
+        status: 204,
+        headers: {
+          "Access-Control-Allow-Origin": "*",
+          "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS, HEAD",
+          "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Requested-With",
+          "Access-Control-Max-Age": "86400",
+        },
+      });
+    }
+
     // Health check endpoint for Cloudflare monitoring
     if (url.pathname === "/api/health") {
       return new Response(
