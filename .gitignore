@@ -1,0 +1,42 @@
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+firebase-debug.log*
+
+node_modules
+dist
+dist-ssr
+*.local
+
+# Rust & Tauri build targets (prevents indexing 12GB binaries)
+target/
+src-tauri/target/
+bin/
+*.exe
+*.dll
+*.pdb
+*.msi
+
+# Local Environment Secrets & DB files
+.env
+.env.production
+.env.local
+*.db
+*.sqlite
+*.sqlite3
+backups/
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
