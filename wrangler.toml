@@ -1,0 +1,6 @@
+name = "novavid"
+main = "worker.js"
+compatibility_date = "2024-09-23"
+
+# Cloudflare Worker configuration for NovaVid AI Studio
+# Routes requests to the production Firebase web application or serves dist/ assets

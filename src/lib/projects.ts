@@ -1,16 +1,12 @@
 import { getDatabase } from "./database";
 import type { Project, ProjectInput, ProjectLanguage } from "./project";
+import {
+  isTauriEnvironment,
+  safeUUID,
+  WebFirestoreProjectStorage,
+} from "./platformStorage";
 
-export function safeUUID(): string {
-  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
-    return crypto.randomUUID();
-  }
-  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
-    const r = (Math.random() * 16) | 0;
-    const v = c === "x" ? r : (r & 0x3) | 0x8;
-    return v.toString(16);
-  });
-}
+export { safeUUID };
 
 function formatSqlError(err: unknown): string {
   if (err instanceof Error) return err.message;
@@ -22,6 +18,10 @@ function formatSqlError(err: unknown): string {
 }
 
 export async function listProjects(): Promise<Project[]> {
+  if (!isTauriEnvironment()) {
+    return await WebFirestoreProjectStorage.listProjects();
+  }
+
   const database = await getDatabase();
   return database.select<Project[]>(
     `SELECT id, name, topic, language, status, created_at, updated_at
@@ -31,6 +31,10 @@ export async function listProjects(): Promise<Project[]> {
 }
 
 export async function createProject(input: ProjectInput): Promise<Project> {
+  if (!isTauriEnvironment()) {
+    return await WebFirestoreProjectStorage.createProject(input);
+  }
+
   const database = await getDatabase();
   const now = new Date().toISOString();
   const project: Project = {
@@ -63,6 +67,10 @@ export async function createProject(input: ProjectInput): Promise<Project> {
 }
 
 export async function updateProject(id: string, input: ProjectInput): Promise<void> {
+  if (!isTauriEnvironment()) {
+    return await WebFirestoreProjectStorage.updateProject(id, input);
+  }
+
   const database = await getDatabase();
   try {
     const result = await database.execute(
@@ -81,6 +89,10 @@ export async function updateProject(id: string, input: ProjectInput): Promise<vo
 }
 
 export async function deleteProject(id: string): Promise<void> {
+  if (!isTauriEnvironment()) {
+    return await WebFirestoreProjectStorage.deleteProject(id);
+  }
+
   const database = await getDatabase();
   try {
     const result = await database.execute("DELETE FROM projects WHERE id = $1", [id]);

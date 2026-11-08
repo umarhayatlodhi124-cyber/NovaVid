@@ -909,13 +909,17 @@ function App() {
               role="status"
               title={
                 storageState === "ready"
-                  ? "Projects are stored in the local SQLite database"
-                  : "Connecting to the local project database"
+                  ? isTauriEnvironment()
+                    ? "Projects are stored in the local SQLite database"
+                    : "Projects are synchronized with Cloud Firestore (novavid-ecfc8)"
+                  : "Connecting to project storage"
               }
             >
               <span className="status-dot" />
               {storageState === "ready"
-                ? "Local storage ready"
+                ? isTauriEnvironment()
+                  ? "Local storage ready"
+                  : "Cloud storage ready"
                 : storageState === "connecting"
                   ? "Connecting"
                   : "Storage unavailable"}
@@ -936,8 +940,9 @@ function App() {
               <span>{storageIssue}</span>
               {storageState === "error" && (
                 <span className="storage-hint">
-                  Open the Windows desktop app with <code>npm run tauri dev</code>.
-                  The browser preview does not have access to the SQLite database.
+                  {isTauriEnvironment()
+                    ? "Check local SQLite database permissions."
+                    : "Connecting to Cloud Firestore or local web cache. Please check your network connection."}
                 </span>
               )}
             </div>
