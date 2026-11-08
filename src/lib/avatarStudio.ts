@@ -1,6 +1,7 @@
 // NovaVid AI Studio 2.0 — Personal AI Face Presenter & Avatar Studio
 // Supports owner authorized avatar for Taleemi Duniya Pro and multi-tenant customer avatars.
 // Multiple layouts (full screen, split screen, picture-in-picture) and video modes.
+// Integrates real inference providers (D-ID, HeyGen, SadTalker Local, and NovaVid Neural Engine).
 
 export type AvatarProvider = "heygen" | "d-id" | "sadtalker_local" | "novavid_neural";
 export type AvatarLayout = "full_screen" | "split_screen" | "picture_in_picture";
@@ -10,6 +11,28 @@ export type TaleemiDuniyaMode =
   | "educational_explainer"
   | "feature_demo"
   | "product_announcement";
+
+export interface FaceConsentOnboarding {
+  id: string;
+  userId: string;
+  ownerName: string;
+  sourcePhotoUrl: string;
+  consentDeclarationSigned: boolean;
+  voiceCloneConsent: boolean;
+  legalEntity: string;
+  verificationTimestamp: string;
+}
+
+export interface AvatarProviderConfig {
+  provider: AvatarProvider;
+  apiKey?: string;
+  apiEndpoint?: string;
+  creditsRemaining?: number;
+  costPerMinuteUsd: number;
+  status: "ready" | "unconfigured" | "error";
+  lastTestedAt?: string;
+  errorMessage?: string;
+}
 
 export interface AvatarProfile {
   id: string;
@@ -26,6 +49,7 @@ export interface AvatarProfile {
   productContext?: "Taleemi Duniya Pro" | "NovaVid AI Studio" | "Custom";
   status: "ready" | "training" | "draft";
   commercialUsageApproved: boolean;
+  consentOnboardingId?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -37,7 +61,7 @@ export interface AvatarVideoRequest {
   language: "Urdu" | "English" | "Bilingual";
   mode: TaleemiDuniyaMode;
   layout: AvatarLayout;
-  backgroundMediaUrl?: string; // Screen recording, slides, or high-tech canvas
+  backgroundMediaUrl?: string;
   aspectRatio: "16:9" | "9:16";
   resolution: "1080p" | "4k";
   outputFilename?: string;
@@ -51,6 +75,8 @@ export interface AvatarVideoResult {
   durationSeconds: number;
   lipSyncConfidence: number; // 0.0 - 1.0 (e.g. 0.98)
   status: "completed" | "processing" | "failed";
+  providerUsed: AvatarProvider;
+  creditsDeducted: number;
   error?: string;
   renderedAt: string;
 }
@@ -88,6 +114,142 @@ export const TALEEMI_DUNIYA_MODES: { id: TaleemiDuniyaMode; label: string; label
   },
 ];
 
+export const PROVIDER_PRICING: Record<AvatarProvider, { name: string; costPerMinuteUsd: number; costPerCreditUsd: number }> = {
+  "d-id": { name: "D-ID Creative Reality Studio", costPerMinuteUsd: 0.24, costPerCreditUsd: 0.06 },
+  heygen: { name: "HeyGen Interactive Avatar", costPerMinuteUsd: 0.75, costPerCreditUsd: 0.75 },
+  sadtalker_local: { name: "SadTalker Local Neural Pipeline", costPerMinuteUsd: 0.00, costPerCreditUsd: 0.00 },
+  novavid_neural: { name: "NovaVid Studio Neural Engine", costPerMinuteUsd: 0.00, costPerCreditUsd: 0.00 },
+};
+
+/**
+ * Calculates estimated cost & credits for avatar video generation.
+ */
+export function estimateAvatarVideoCost(
+  durationSeconds: number,
+  provider: AvatarProvider
+): {
+  durationSeconds: number;
+  creditsRequired: number;
+  estimatedCostUsd: number;
+  providerName: string;
+} {
+  const pricing = PROVIDER_PRICING[provider];
+  const minutes = Math.max(1, Math.ceil(durationSeconds / 60));
+  const credits = provider === "d-id" ? Math.ceil(durationSeconds / 15) : minutes;
+  const cost = provider === "d-id" ? credits * pricing.costPerCreditUsd : minutes * pricing.costPerMinuteUsd;
+
+  return {
+    durationSeconds,
+    creditsRequired: credits,
+    estimatedCostUsd: Math.round(cost * 100) / 100,
+    providerName: pricing.name,
+  };
+}
+
+/**
+ * Validates face onboarding and consent before neural talking-head synthesis.
+ */
+export function validateFaceConsent(record: FaceConsentOnboarding): { valid: boolean; error?: string } {
+  if (!record.consentDeclarationSigned) {
+    return { valid: false, error: "Legal consent declaration must be signed by the face owner." };
+  }
+  if (!record.sourcePhotoUrl) {
+    return { valid: false, error: "A high-resolution front-facing source photo is required." };
+  }
+  if (!record.ownerName || record.ownerName.trim().length < 2) {
+    return { valid: false, error: "Authorized owner full name is required." };
+  }
+  return { valid: true };
+}
+
+/**
+ * D-ID API Client Adapter
+ */
+export async function createDIDTalkJob(
+  apiKey: string,
+  input: {
+    sourceUrl: string;
+    scriptText: string;
+    voiceId?: string;
+    audioUrl?: string;
+  }
+): Promise<{ talkId: string; status: string; creditsRemaining?: number }> {
+  if (!apiKey || apiKey.trim().length === 0) {
+    throw new Error("D-ID API key is required. Please configure credentials.");
+  }
+
+  const payload: Record<string, unknown> = {
+    source_url: input.sourceUrl,
+    script: input.audioUrl
+      ? { type: "audio", audio_url: input.audioUrl }
+      : {
+          type: "text",
+          input: input.scriptText,
+          provider: {
+            type: "microsoft",
+            voice_id: input.voiceId || "ur-PK-AsadNeural",
+          },
+        },
+    config: {
+      fluent: true,
+      pad_audio: 0.5,
+      stitch: true,
+    },
+  };
+
+  try {
+    const res = await fetch("https://api.d-id.com/talks", {
+      method: "POST",
+      headers: {
+        Authorization: `Basic ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (!res.ok) {
+      const errText = await res.text();
+      throw new Error(`D-ID Talk creation failed (HTTP ${res.status}): ${errText}`);
+    }
+
+    const data = await res.json();
+    return { talkId: data.id, status: data.status || "created" };
+  } catch (err: unknown) {
+    // If offline or in testing, return structured error
+    if (err instanceof Error) throw err;
+    throw new Error(String(err));
+  }
+}
+
+/**
+ * Polls status of D-ID talk job
+ */
+export async function pollDIDTalkJob(
+  apiKey: string,
+  talkId: string
+): Promise<{
+  status: "created" | "started" | "done" | "error";
+  resultUrl?: string;
+  error?: string;
+}> {
+  if (!apiKey) throw new Error("D-ID API key is missing.");
+
+  const res = await fetch(`https://api.d-id.com/talks/${talkId}`, {
+    headers: { Authorization: `Basic ${apiKey}` },
+  });
+
+  if (!res.ok) {
+    throw new Error(`D-ID polling error (HTTP ${res.status})`);
+  }
+
+  const data = await res.json();
+  return {
+    status: data.status,
+    resultUrl: data.result_url,
+    error: data.error ? JSON.stringify(data.error) : undefined,
+  };
+}
+
 /**
  * Returns default owner avatar profile for LODHI TECHX (Taleemi Duniya Pro).
  */
@@ -97,7 +259,7 @@ export function getOwnerAvatarProfile(userId = "owner_lodhi_techx"): AvatarProfi
     userId,
     name: "Umar Hayat (LODHI TECHX)",
     title: "Founder & Lead Educator — Taleemi Duniya Pro",
-    photoUrl: "/avatars/lodhi_techx_presenter.png",
+    photoUrl: "/avatars/umar_hayat.png",
     voiceName: "ur-PK-AsadNeural",
     provider: "novavid_neural",
     layout: "picture_in_picture",
@@ -105,6 +267,7 @@ export function getOwnerAvatarProfile(userId = "owner_lodhi_techx"): AvatarProfi
     productContext: "Taleemi Duniya Pro",
     status: "ready",
     commercialUsageApproved: true,
+    consentOnboardingId: "consent_owner_lodhi_techx_01",
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   };
@@ -114,13 +277,13 @@ export function getOwnerAvatarProfile(userId = "owner_lodhi_techx"): AvatarProfi
  * In-memory store for isolated tenant avatar profiles.
  */
 const tenantAvatarStore: Record<string, AvatarProfile[]> = {};
+const tenantConsentStore: Record<string, FaceConsentOnboarding[]> = {};
 
 /**
  * Lists avatar profiles isolated by userId.
  */
 export function listTenantAvatars(userId: string): AvatarProfile[] {
   if (!tenantAvatarStore[userId]) {
-    // If owner, seed default Taleemi Duniya Pro avatar
     if (userId.includes("lodhi") || userId.includes("owner")) {
       tenantAvatarStore[userId] = [getOwnerAvatarProfile(userId)];
     } else {
@@ -142,6 +305,22 @@ export function saveTenantAvatar(profile: AvatarProfile): void {
     list.push({ ...profile, updatedAt: new Date().toISOString() });
   }
   tenantAvatarStore[profile.userId] = list;
+}
+
+/**
+ * Saves face consent record.
+ */
+export function saveFaceConsentRecord(record: FaceConsentOnboarding): void {
+  const list = tenantConsentStore[record.userId] || [];
+  list.push(record);
+  tenantConsentStore[record.userId] = list;
+}
+
+/**
+ * Gets face consent records for tenant.
+ */
+export function getFaceConsentRecords(userId: string): FaceConsentOnboarding[] {
+  return [...(tenantConsentStore[userId] || [])];
 }
 
 /**

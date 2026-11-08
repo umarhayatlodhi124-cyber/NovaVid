@@ -1,0 +1,98 @@
+{
+  "status": "SUCCESS",
+  "video_id": "XqGh8IVfIFw",
+  "youtube_url": "https://youtu.be/XqGh8IVfIFw",
+  "channel_id": "UCL1USyVzIikDT-K1OIg69_w",
+  "channel_title": "Lodhi TechX",
+  "title": "Umar Hayat \u2014 LODHI TECHX AI Avatar Presenter | Urdu Demonstration",
+  "privacy": "private",
+  "file_path": "G:\\Nova Vid\\exports\\Umar_Hayat_Urdu_AI_Avatar_Demonstration.mp4",
+  "file_size_bytes": 476537,
+  "thumbnail_path": "G:\\Nova Vid\\exports\\umar_hayat_presenter_portrait.png",
+  "thumbnail_result": {
+    "kind": "youtube#thumbnailSetResponse",
+    "etag": "Xiw8tmHiBJ4rHnj4qozLKVD4rN0",
+    "items": [
+      {
+        "default": {
+          "url": "https://i9.ytimg.com/vi/XqGh8IVfIFw/default.jpg?sqp=CPTCwNcG&rs=AOn4CLBoLPAMQe5Xq89sqaXKzstzvua5Cg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i9.ytimg.com/vi/XqGh8IVfIFw/mqdefault.jpg?sqp=CPTCwNcG&rs=AOn4CLCPLubJhkoGgiIoAQXcfp6tiZI6oA",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i9.ytimg.com/vi/XqGh8IVfIFw/hqdefault.jpg?sqp=CPTCwNcG&rs=AOn4CLBnnsxccmLq4glZI_xesAyjYOk_GA",
+          "width": 480,
+          "height": 360
+        },
+        "standard": {
+          "url": "https://i9.ytimg.com/vi/XqGh8IVfIFw/sddefault.jpg?sqp=CPTCwNcG&rs=AOn4CLB3ZDQZwNCqGIaq8KllEEZLppIavQ",
+          "width": 640,
+          "height": 480
+        },
+        "maxres": {
+          "url": "https://i9.ytimg.com/vi/XqGh8IVfIFw/maxresdefault.jpg?sqp=CPTCwNcG&rs=AOn4CLAku0Dd_PwaqvzfXRhcRXdFp7hKdw",
+          "width": 1280,
+          "height": 720
+        }
+      }
+    ]
+  },
+  "upload_api_response": {
+    "kind": "youtube#video",
+    "etag": "mrKaW_SIBgSyiq4HrzwiCYSB5gg",
+    "id": "XqGh8IVfIFw",
+    "snippet": {
+      "publishedAt": "2026-11-08T07:18:10Z",
+      "channelId": "UCL1USyVzIikDT-K1OIg69_w",
+      "title": "Umar Hayat \u2014 LODHI TECHX AI Avatar Presenter | Urdu Demonstration",
+      "description": "Official demonstration of NovaVid AI Studio 2.0 Real Personal AI Face Presenter.\n\nPresenter: Umar Hayat (Founder & CEO, LODHI TECHX)\nLanguage: Urdu (Microsoft AsadNeural)\nFeatures: Photorealistic Face Avatar, Phoneme-Synchronized Lip Movement, Natural Eye Blinking, Subtle Breathing Sway\nResolution: 1080p Full HD (1920x1080) @ 30fps Constrained VBR Broadcast Quality\n\n#LodhiTechX #NovaVid #AIAvatar #TalkingHead #EdTech #UmarHayat #TaleemiDuniya",
+      "thumbnails": {
+        "default": {
+          "url": "https://i9.ytimg.com/vi/XqGh8IVfIFw/default.jpg?sqp=CPTCwNcG&rs=AOn4CLBoLPAMQe5Xq89sqaXKzstzvua5Cg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i9.ytimg.com/vi/XqGh8IVfIFw/mqdefault.jpg?sqp=CPTCwNcG&rs=AOn4CLCPLubJhkoGgiIoAQXcfp6tiZI6oA",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i9.ytimg.com/vi/XqGh8IVfIFw/hqdefault.jpg?sqp=CPTCwNcG&rs=AOn4CLBnnsxccmLq4glZI_xesAyjYOk_GA",
+          "width": 480,
+          "height": 360
+        }
+      },
+      "channelTitle": "Lodhi TechX",
+      "tags": [
+        "AI Avatar",
+        "Artificial Intelligence",
+        "LODHI TECHX",
+        "NovaVid AI Studio",
+        "Taleemi Duniya Pro",
+        "Talking Face",
+        "Umar Hayat",
+        "Urdu AI Presenter"
+      ],
+      "categoryId": "28",
+      "liveBroadcastContent": "none",
+      "localized": {
+        "title": "Umar Hayat \u2014 LODHI TECHX AI Avatar Presenter | Urdu Demonstration",
+        "description": "Official demonstration of NovaVid AI Studio 2.0 Real Personal AI Face Presenter.\n\nPresenter: Umar Hayat (Founder & CEO, LODHI TECHX)\nLanguage: Urdu (Microsoft AsadNeural)\nFeatures: Photorealistic Face Avatar, Phoneme-Synchronized Lip Movement, Natural Eye Blinking, Subtle Breathing Sway\nResolution: 1080p Full HD (1920x1080) @ 30fps Constrained VBR Broadcast Quality\n\n#LodhiTechX #NovaVid #AIAvatar #TalkingHead #EdTech #UmarHayat #TaleemiDuniya"
+      }
+    },
+    "status": {
+      "uploadStatus": "uploaded",
+      "privacyStatus": "private",
+      "license": "youtube",
+      "embeddable": true,
+      "publicStatsViewable": true,
+      "selfDeclaredMadeForKids": false
+    }
+  }
+}

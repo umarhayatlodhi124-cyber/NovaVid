@@ -1,0 +1,63 @@
+# ==============================================================================
+# NovaVid AI Studio 2.0 — Headless Cloud Video Rendering Worker
+# Multi-Tenant Headless FFmpeg Execution Container (ECS / Cloud Run / Kubernetes)
+# Brand Owner: LODHI TECHX | Product: NovaVid AI Studio 2.0
+# ==============================================================================
+
+FROM node:20-bullseye-slim
+
+# Prevent interactive prompts during apt install
+ENV DEBIAN_FRONTEND=noninteractive
+ENV NODE_ENV=production
+ENV RENDER_WORKSPACE=/tmp/novavid_render_scratch
+
+# Install system dependencies, FFmpeg with full codec support, and essential fonts
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ffmpeg \
+    fonts-freefont-ttf \
+    fonts-noto-core \
+    fonts-noto-cjk \
+    fonts-noto-extra \
+    fonts-urw-base35 \
+    ca-certificates \
+    curl \
+    python3 \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create non-root rendering user for strict container isolation & security
+RUN useradd -ms /bin/bash -u 1001 novavid && \
+    mkdir -p ${RENDER_WORKSPACE} && \
+    chown -R novavid:novavid ${RENDER_WORKSPACE}
+
+WORKDIR /app
+
+# Copy dependency manifests
+COPY package*.json ./
+
+# Install production dependencies
+RUN npm ci --only=production
+
+# Copy application source code
+COPY . .
+
+# Build TypeScript backend if needed
+RUN npx tsc -p tsconfig.worker.json || true
+
+# Switch to unprivileged user
+USER novavid
+
+# Expose container health check port
+EXPOSE 8080
+
+# Environment variables
+ENV PORT=8080
+ENV AWS_DEFAULT_REGION=us-east-1
+ENV MAX_CONCURRENT_JOBS=2
+ENV JOB_TIMEOUT_SECONDS=600
+
+# Healthcheck command
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+  CMD curl -f http://localhost:8080/health || exit 1
+
+# Start headless cloud rendering service
+CMD ["node", "dist/cloud/renderWorkerService.js"]
