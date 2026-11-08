@@ -85,9 +85,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (err?.code === "auth/invalid-credential" || err?.code === "auth/wrong-password") {
         msg = "Invalid email or password. Please verify and try again.";
       } else if (err?.code === "auth/user-not-found") {
-        msg = "No account found with this email. Please create an account.";
+        msg = "No account found with this email. Please click 'Create an Account' below to sign up.";
       } else if (err?.code === "auth/too-many-requests") {
         msg = "Access temporarily blocked due to multiple failed attempts. Try again later or reset password.";
+      } else if (err?.code === "auth/internal-error" || msg.includes("auth/internal-error")) {
+        msg = "Invalid email or password. If you don't have an account yet, click 'Create an Account' below to sign up.";
+      } else if (err?.code === "auth/network-request-failed") {
+        msg = "Network connection failed. Please check your internet connection and try again.";
       }
       setError(msg);
       throw new Error(msg);

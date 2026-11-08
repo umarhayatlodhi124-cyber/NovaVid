@@ -5,6 +5,10 @@
 import { initializeApp, getApps, getApp, FirebaseApp } from "firebase/app";
 import {
   getAuth,
+  initializeAuth,
+  browserLocalPersistence,
+  indexedDBLocalPersistence,
+  inMemoryPersistence,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   signOut,
@@ -48,8 +52,20 @@ export const firebaseConfig = {
 export const app: FirebaseApp =
   getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
 
-// 2. Export core initialized services
-export const auth: Auth = getAuth(app);
+// 2. Export core initialized services with resilient multi-layer desktop & web persistence
+function initializeFirebaseAuth(): Auth {
+  try {
+    return initializeAuth(app, {
+      persistence: typeof window !== "undefined"
+        ? [browserLocalPersistence, indexedDBLocalPersistence, inMemoryPersistence]
+        : inMemoryPersistence,
+    });
+  } catch {
+    return getAuth(app);
+  }
+}
+
+export const auth: Auth = initializeFirebaseAuth();
 export const db: Firestore = getFirestore(app);
 export const storage: FirebaseStorage = getStorage(app);
 
