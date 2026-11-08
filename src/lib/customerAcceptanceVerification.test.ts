@@ -114,7 +114,7 @@ describe("Real Customer Acceptance & Security Verification", () => {
     });
 
     it("restricts Free tier customers from unpermitted cloud workers", async () => {
-      const freeUser = await saasClient.signInWithEmail("free_tier_user@test.com", "pass");
+      await saasClient.signInWithEmail("free_tier_user@test.com", "pass");
       const project = await saasClient.createProject({
         name: "Free Project",
         topic: "Education",
