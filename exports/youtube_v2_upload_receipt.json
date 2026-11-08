@@ -1,0 +1,167 @@
+{
+  "channel": "Lodhi TechX (@lodhitechx)",
+  "channelId": "UCL1USyVzIikDT-K1OIg69_w",
+  "video1": {
+    "videoId": "BnE6_ZbM4Bc",
+    "url": "https://youtu.be/BnE6_ZbM4Bc",
+    "verifiedData": {
+      "kind": "youtube#video",
+      "etag": "bUI3rjcODTczNrtESnXa_A4gt-Y",
+      "id": "BnE6_ZbM4Bc",
+      "snippet": {
+        "publishedAt": "2026-11-08T06:03:05Z",
+        "channelId": "UCL1USyVzIikDT-K1OIg69_w",
+        "title": "LODHI TECHX \u2014 AI Technology Introduction",
+        "description": "Official demonstration of NovaVid AI Studio 2.0 by LODHI TECHX.\n\nFeatures:\n\u2022 End-to-end autonomous AI video creation\n\u2022 Studio-grade Urdu neural voice narration\n\u2022 1080p 60fps high-definition rendering\n\u2022 Multi-tenant cloud synchronization\n\u2022 Automated YouTube channel publishing\n\nBrand Owner: LODHI TECHX\nWebsite: https://novavid-ecfc8.web.app\nPrivacy: Private (Acceptance Verification Test)",
+        "thumbnails": {
+          "default": {
+            "url": "https://i9.ytimg.com/vi/BnE6_ZbM4Bc/default.jpg?sqp=CMS5wNcG&rs=AOn4CLBSjMY9ZnYUrzPKh1rypf3FR1vQjA",
+            "width": 120,
+            "height": 90
+          },
+          "medium": {
+            "url": "https://i9.ytimg.com/vi/BnE6_ZbM4Bc/mqdefault.jpg?sqp=CMS5wNcG&rs=AOn4CLAjBuxuP735zP-H5ticUYT98wDGpw",
+            "width": 320,
+            "height": 180
+          },
+          "high": {
+            "url": "https://i9.ytimg.com/vi/BnE6_ZbM4Bc/hqdefault.jpg?sqp=CMS5wNcG&rs=AOn4CLAB5DcPMHKtxjGlAkTqUDQ3RWj8vw",
+            "width": 480,
+            "height": 360
+          },
+          "standard": {
+            "url": "https://i9.ytimg.com/vi/BnE6_ZbM4Bc/sddefault.jpg?sqp=CMS5wNcG&rs=AOn4CLDhXxcKzKfjiGOKU4JjLcSJ11SIMg",
+            "width": 640,
+            "height": 480
+          },
+          "maxres": {
+            "url": "https://i9.ytimg.com/vi/BnE6_ZbM4Bc/maxresdefault.jpg?sqp=CMS5wNcG&rs=AOn4CLC3xv8XVNSX05A4D3xsiBUrT3ZB9A",
+            "width": 1280,
+            "height": 720
+          }
+        },
+        "channelTitle": "Lodhi TechX",
+        "tags": [
+          "AI Technology",
+          "AI Video Creation",
+          "LODHI TECHX",
+          "NovaVid",
+          "Pakistan Tech",
+          "SaaS",
+          "Urdu AI Voice",
+          "YouTube Automation"
+        ],
+        "categoryId": "28",
+        "liveBroadcastContent": "none",
+        "defaultLanguage": "ur",
+        "localized": {
+          "title": "LODHI TECHX \u2014 AI Technology Introduction",
+          "description": "Official demonstration of NovaVid AI Studio 2.0 by LODHI TECHX.\n\nFeatures:\n\u2022 End-to-end autonomous AI video creation\n\u2022 Studio-grade Urdu neural voice narration\n\u2022 1080p 60fps high-definition rendering\n\u2022 Multi-tenant cloud synchronization\n\u2022 Automated YouTube channel publishing\n\nBrand Owner: LODHI TECHX\nWebsite: https://novavid-ecfc8.web.app\nPrivacy: Private (Acceptance Verification Test)"
+        },
+        "defaultAudioLanguage": "ur"
+      },
+      "status": {
+        "uploadStatus": "processed",
+        "privacyStatus": "private",
+        "license": "youtube",
+        "embeddable": true,
+        "publicStatsViewable": true,
+        "madeForKids": false,
+        "selfDeclaredMadeForKids": false
+      }
+    }
+  },
+  "video2": {
+    "videoId": "lpGhLUkayaM",
+    "url": "https://youtu.be/lpGhLUkayaM",
+    "privacyStatus": "private",
+    "uploadResponse": {
+      "kind": "youtube#video",
+      "etag": "TBw93CRVCdoDl5hmIocB8c9NMMg",
+      "id": "lpGhLUkayaM",
+      "snippet": {
+        "publishedAt": "2026-11-08T06:58:35Z",
+        "channelId": "UCL1USyVzIikDT-K1OIg69_w",
+        "title": "Taleemi Duniya Pro \u2014 Complete Educational ERP Software Tutorial (LODHI TECHX)",
+        "description": "Welcome to Taleemi Duniya Pro, Pakistan's leading digital campus management and academic ERP software.\n\nWatch the official full walkthrough presented by Umar Hayat, Founder LODHI TECHX.\n\nKey Modules:\n- Student Admissions & Biometric Attendance\n- Automated Fee Management & SMS Alerts\n- Smart Exam Paper Generator & Instant Marksheets\n- Dedicated Teacher & Parent Mobile Apps\n\nChapters:\n0:00 Introduction & Overview\n0:15 Student & Fee Management\n0:27 Smart Exam Engine\n0:40 Mobile Applications\n0:52 Digital Campus Free Demo\n\n#TaleemiDuniya #LodhiTechX #SchoolManagement #EdTech #SoftwareTutorial",
+        "thumbnails": {
+          "default": {
+            "url": "https://i9.ytimg.com/vi/lpGhLUkayaM/default.jpg?sqp=CMS5wNcG&rs=AOn4CLAY28cv8dZNa2cQShZyFwA0JPn1tg",
+            "width": 120,
+            "height": 90
+          },
+          "medium": {
+            "url": "https://i9.ytimg.com/vi/lpGhLUkayaM/mqdefault.jpg?sqp=CMS5wNcG&rs=AOn4CLCWiwafK7Anq9UNDvQRhi38CHiH1A",
+            "width": 320,
+            "height": 180
+          },
+          "high": {
+            "url": "https://i9.ytimg.com/vi/lpGhLUkayaM/hqdefault.jpg?sqp=CMS5wNcG&rs=AOn4CLAUxTBkCB29cuVHoAWdKoxpgBeRog",
+            "width": 480,
+            "height": 360
+          }
+        },
+        "channelTitle": "Lodhi TechX",
+        "tags": [
+          "Educational ERP",
+          "LODHI TECHX",
+          "Online Fee Management",
+          "Pakistan EdTech",
+          "School Management Software",
+          "Student Attendance System",
+          "Taleemi Duniya Pro",
+          "Umar Hayat",
+          "Urdu Software Tutorial"
+        ],
+        "categoryId": "27",
+        "liveBroadcastContent": "none",
+        "localized": {
+          "title": "Taleemi Duniya Pro \u2014 Complete Educational ERP Software Tutorial (LODHI TECHX)",
+          "description": "Welcome to Taleemi Duniya Pro, Pakistan's leading digital campus management and academic ERP software.\n\nWatch the official full walkthrough presented by Umar Hayat, Founder LODHI TECHX.\n\nKey Modules:\n- Student Admissions & Biometric Attendance\n- Automated Fee Management & SMS Alerts\n- Smart Exam Paper Generator & Instant Marksheets\n- Dedicated Teacher & Parent Mobile Apps\n\nChapters:\n0:00 Introduction & Overview\n0:15 Student & Fee Management\n0:27 Smart Exam Engine\n0:40 Mobile Applications\n0:52 Digital Campus Free Demo\n\n#TaleemiDuniya #LodhiTechX #SchoolManagement #EdTech #SoftwareTutorial"
+        }
+      },
+      "status": {
+        "uploadStatus": "uploaded",
+        "privacyStatus": "private",
+        "license": "youtube",
+        "embeddable": true,
+        "publicStatsViewable": true,
+        "selfDeclaredMadeForKids": false
+      }
+    },
+    "thumbnailResponse": {
+      "kind": "youtube#thumbnailSetResponse",
+      "etag": "C90HdUulRPSz_eOOT9m7sQ8GcNw",
+      "items": [
+        {
+          "default": {
+            "url": "https://i9.ytimg.com/vi/lpGhLUkayaM/default.jpg?sqp=CMS5wNcG&rs=AOn4CLAY28cv8dZNa2cQShZyFwA0JPn1tg",
+            "width": 120,
+            "height": 90
+          },
+          "medium": {
+            "url": "https://i9.ytimg.com/vi/lpGhLUkayaM/mqdefault.jpg?sqp=CMS5wNcG&rs=AOn4CLCWiwafK7Anq9UNDvQRhi38CHiH1A",
+            "width": 320,
+            "height": 180
+          },
+          "high": {
+            "url": "https://i9.ytimg.com/vi/lpGhLUkayaM/hqdefault.jpg?sqp=CMS5wNcG&rs=AOn4CLAUxTBkCB29cuVHoAWdKoxpgBeRog",
+            "width": 480,
+            "height": 360
+          },
+          "standard": {
+            "url": "https://i9.ytimg.com/vi/lpGhLUkayaM/sddefault.jpg?sqp=CMS5wNcG&rs=AOn4CLB8o90ffr630hmWYjKO5Up9z48zAA",
+            "width": 640,
+            "height": 480
+          },
+          "maxres": {
+            "url": "https://i9.ytimg.com/vi/lpGhLUkayaM/maxresdefault.jpg?sqp=CMS5wNcG&rs=AOn4CLASp3SRbZU9jmC_CiZfsLy_4XcBJg",
+            "width": 1280,
+            "height": 720
+          }
+        }
+      ]
+    }
+  },
+  "verifiedAt": "2026-11-08T12:00:00Z"
+}

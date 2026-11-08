@@ -454,7 +454,7 @@ export function generateDailyJobBatch(
       continue;
     }
 
-    const scheduledTime = config.shortsPublishTimes[s] || `${10 + s * 3}:00`;
+    const scheduledTime = (config.shortsPublishTimes && config.shortsPublishTimes[s]) || `${10 + s * 3}:00`;
     const selectedTopic = topicPool[topicIndex % Math.max(1, topicPool.length)] || `${config.subNiche} Quick Tip #${s + 1}`;
     topicIndex++;
 
@@ -483,7 +483,7 @@ export function generateDailyJobBatch(
       continue;
     }
 
-    const scheduledTime = config.longPublishTimes[l] || `${12 + l * 4}:00`;
+    const scheduledTime = (config.longPublishTimes && config.longPublishTimes[l]) || `${12 + l * 4}:00`;
     const selectedTopic = topicPool[topicIndex % Math.max(1, topicPool.length)] || `${config.subNiche} Comprehensive Deep Dive #${l + 1}`;
     topicIndex++;
 
