@@ -75,7 +75,11 @@ const INITIAL_TENANTS: MockTenant[] = [
   },
 ];
 
-export const AdminSaaSPanel: React.FC = () => {
+export interface AdminSaaSPanelProps {
+  onNavigateToAwsConnection?: () => void;
+}
+
+export const AdminSaaSPanel: React.FC<AdminSaaSPanelProps> = ({ onNavigateToAwsConnection }) => {
   const [session, setSession] = useState<CloudSession>(cloudClient.getSession());
   const [tenants, setTenants] = useState<MockTenant[]>(INITIAL_TENANTS);
   const [searchQuery, setSearchQuery] = useState("");
@@ -436,6 +440,14 @@ export const AdminSaaSPanel: React.FC = () => {
           </div>
 
           <div className="flex items-center gap-3">
+            {onNavigateToAwsConnection && (
+              <button
+                onClick={onNavigateToAwsConnection}
+                className="px-3.5 py-2 text-xs font-bold rounded-lg bg-amber-600 hover:bg-amber-500 text-white border border-amber-500/50 transition-colors flex items-center gap-1.5 cursor-pointer shadow-md shadow-amber-600/20"
+              >
+                <span>☁️ AWS Cloud Connection (BYOA) ↗</span>
+              </button>
+            )}
             <button
               onClick={handleAdminLogout}
               className="px-3.5 py-2 text-xs font-medium rounded-lg bg-red-950/60 hover:bg-red-900/80 text-red-300 border border-red-700/50 transition-colors cursor-pointer"

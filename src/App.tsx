@@ -195,13 +195,13 @@ const URDU_PAGE_TITLES: Record<string, string> = {
 export const navigation = [
   { label: "Overview", view: "dashboard" as const, icon: "grid" },
   { label: "Daily Automation", view: "automation" as const, icon: "spark" },
+  { label: "AWS Cloud Connection", view: "aws_cloud" as const, icon: "render" },
+  { label: "Google & YouTube", view: "google_youtube" as const, icon: "spark" },
   { label: "AI Face Presenter", view: "avatar" as const, icon: "video" },
   { label: "Thumbnail Studio", view: "thumbnails" as const, icon: "image" },
   { label: "Quality Control (QC)", view: "quality_control" as const, icon: "shield" },
   { label: "AI Agent (Auto)", view: "agent" as const, icon: "spark" },
   { label: "Creator Workspace", view: "creator" as const, icon: "spark" },
-  { label: "Google & YouTube", view: "google_youtube" as const, icon: "spark" },
-  { label: "AWS Cloud Connection", view: "aws_cloud" as const, icon: "render" },
   { label: "Projects", view: "projects" as const, icon: "folder" },
   { label: "Media library", view: "media" as const, icon: "media" },
   { label: "AI Providers", view: "providers" as const, icon: "spark" },
@@ -1424,9 +1424,9 @@ Please structure the script with the following sections:
           ) : view === "license" ? (
             <LicensingStudioPage />
           ) : view === "customer_saas" ? (
-            <CustomerSaaSPanel />
+            <CustomerSaaSPanel onNavigateToAwsConnection={() => setView("aws_cloud")} />
           ) : view === "admin_saas" ? (
-            <AdminSaaSPanel />
+            <AdminSaaSPanel onNavigateToAwsConnection={() => setView("aws_cloud")} />
           ) : (
             <SettingsPage
               settings={studioSettings}

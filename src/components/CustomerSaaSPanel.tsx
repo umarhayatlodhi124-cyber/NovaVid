@@ -32,7 +32,11 @@ const INITIAL_DEVICES: BoundDevice[] = [
   },
 ];
 
-export const CustomerSaaSPanel: React.FC = () => {
+export interface CustomerSaaSPanelProps {
+  onNavigateToAwsConnection?: () => void;
+}
+
+export const CustomerSaaSPanel: React.FC<CustomerSaaSPanelProps> = ({ onNavigateToAwsConnection }) => {
   const [currentTier, setCurrentTier] = useState<LicenseTier>("creator");
   const [devices, setDevices] = useState<BoundDevice[]>(INITIAL_DEVICES);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
@@ -101,6 +105,30 @@ export const CustomerSaaSPanel: React.FC = () => {
             <span>✓ {actionNotice}</span>
             <button onClick={() => setActionNotice(null)} className="text-emerald-400 font-bold hover:text-white">✕</button>
           </div>
+        )}
+      </div>
+
+      {/* Customer AWS BYOA Cloud Connection Card */}
+      <div className="bg-gradient-to-r from-amber-950/40 via-amber-900/20 to-slate-900 border border-amber-500/40 rounded-xl p-4 shadow-lg flex flex-wrap items-center justify-between gap-4">
+        <div className="space-y-1">
+          <div className="flex items-center gap-2">
+            <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-amber-500/20 text-amber-300 border border-amber-500/30">
+              Customer-Owned AWS (Option B)
+            </span>
+            <span className="text-xs text-slate-300 font-semibold">Zero Shared Cloud Billing</span>
+          </div>
+          <h3 className="text-base font-bold text-white">AWS Cloud Connection & Rendering Infrastructure</h3>
+          <p className="text-xs text-slate-400 max-w-2xl">
+            Connect your own AWS account using ephemeral STS AssumeRole. Render high-throughput GPU workloads in your isolated cloud queue with direct AWS wholesale billing ($0 SaaS markup).
+          </p>
+        </div>
+        {onNavigateToAwsConnection && (
+          <button
+            onClick={onNavigateToAwsConnection}
+            className="px-4 py-2.5 text-xs font-bold rounded-lg bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 text-black shadow-md shadow-amber-500/20 transition-all flex items-center gap-1.5 whitespace-nowrap"
+          >
+            <span>☁️ Open AWS Connection Center ↗</span>
+          </button>
         )}
       </div>
 
