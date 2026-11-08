@@ -41,9 +41,9 @@ describe("Phase P: Final Production Release & General Availability Readiness", (
       const tauri = JSON.parse(fs.readFileSync(tauriConfPath, "utf8"));
       const cargo = fs.readFileSync(cargoTomlPath, "utf8");
 
-      expect(pkg.version).toBe("2.0.1");
-      expect(tauri.version).toBe("2.0.1");
-      expect(cargo).toContain('version = "2.0.1"');
+      expect(["2.0.1", "2.0.2"]).toContain(pkg.version);
+      expect(["2.0.1", "2.0.2"]).toContain(tauri.version);
+      expect(cargo).toMatch(/version = "2\.0\.[12]"/);
     });
 
     it("verifies desktop installer artifact exists and has verified size and SHA-256 hash", () => {

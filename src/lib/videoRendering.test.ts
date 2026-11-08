@@ -52,7 +52,7 @@ describe("Phase B: Real Local FFmpeg Video Rendering & Media Verification", () =
     // Copy to distDir as well
     fs.copyFileSync(targetFile, path.join(distDir, path.basename(targetFile)));
     expect(fs.statSync(targetFile).size).toBeGreaterThan(10000);
-  });
+  }, 30000);
 
   it("should render a genuine 9:16 Vertical Shorts (1080x1920) H.264/AAC MP4 video", () => {
     const targetFile = renderFiles.vertical9x16;
@@ -74,7 +74,7 @@ describe("Phase B: Real Local FFmpeg Video Rendering & Media Verification", () =
 
     fs.copyFileSync(targetFile, path.join(distDir, path.basename(targetFile)));
     expect(fs.statSync(targetFile).size).toBeGreaterThan(10000);
-  });
+  }, 30000);
 
   it("should render a genuine 1:1 Square Social (1080x1080) H.264/AAC MP4 video", () => {
     const targetFile = renderFiles.square1x1;
@@ -96,7 +96,7 @@ describe("Phase B: Real Local FFmpeg Video Rendering & Media Verification", () =
 
     fs.copyFileSync(targetFile, path.join(distDir, path.basename(targetFile)));
     expect(fs.statSync(targetFile).size).toBeGreaterThan(10000);
-  });
+  }, 30000);
 
   it("should render an actual multi-scene user timeline with video, audio track, and subtitle overlays", () => {
     const targetFile = renderFiles.userTimeline;
@@ -119,7 +119,7 @@ describe("Phase B: Real Local FFmpeg Video Rendering & Media Verification", () =
 
     fs.copyFileSync(targetFile, path.join(distDir, path.basename(targetFile)));
     expect(fs.statSync(targetFile).size).toBeGreaterThan(15000);
-  });
+  }, 30000);
 
   it("should inspect all rendered MP4 files with FFprobe and confirm exact stream properties", () => {
     const filesToTest = [

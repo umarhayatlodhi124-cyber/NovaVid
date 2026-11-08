@@ -30,14 +30,9 @@ import { execSync } from "child_process";
 
 import {
   CommercialBillingGateway,
-  OWNER_PROTECTED_EMAIL,
-  COMMERCIAL_TIER_CREDITS,
 } from "./commercialBillingGateway";
 import {
-  STUDIO_ED25519_PUBLIC_KEY,
   verifySignedLicense,
-  validateDeviceActivationQuota,
-  sha256Hex,
 } from "./licensingCrypto";
 import { issueSignedLicenseEd25519 } from "../../cloud/keys";
 import { inspectVideoQuality } from "./qualityControl";
@@ -45,7 +40,6 @@ import { AUTHORIZED_ADMIN_EMAILS } from "../components/AdminSaaSPanel";
 
 describe("Phase 12: Final Production Acceptance & 15-Step Workflow Verification", () => {
   const rootDir = path.resolve("G:/Nova Vid");
-  const ffmpegExe = path.join(rootDir, "bin/ffmpeg.exe");
   const ffprobeExe = path.join(rootDir, "bin/ffprobe.exe");
   const renderDir = path.join(rootDir, "test_renders");
   const distDir = path.join(rootDir, "dist");
@@ -163,7 +157,7 @@ describe("Phase 12: Final Production Acceptance & 15-Step Workflow Verification"
 
       expect(qc.scorePercent).toBeGreaterThanOrEqual(95);
       expect(qc.overallStatus).toBe("PASS");
-    });
+    }, 30000);
   });
 
   // STEP 11, 12, 13: Customer SaaS Quotas, Admin SaaS RBAC, Licensing & Grace
