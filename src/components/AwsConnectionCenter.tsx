@@ -58,6 +58,7 @@ export const AwsConnectionCenter: React.FC<AwsConnectionCenterProps> = ({
   const [regionInput, setRegionInput] = useState(connection.region);
   const [gpuQuotaInput, setGpuQuotaInput] = useState<number>(connection.gpuQuota.quotaValue || 0);
   const [templateFormat, setTemplateFormat] = useState<"yaml" | "json">("yaml");
+  const [templateScope, setTemplateScope] = useState<"role_only" | "full">("role_only");
   const [copiedTemplate, setCopiedTemplate] = useState(false);
   const [copiedExtId, setCopiedExtId] = useState(false);
   const [isVerifying, setIsVerifying] = useState(false);
@@ -108,6 +109,7 @@ export const AwsConnectionCenter: React.FC<AwsConnectionCenterProps> = ({
     awsRegion: regionInput,
     controlPlaneAccountId: DEFAULT_CONTROL_PLANE_ACCOUNT_ID,
     enableGpuBatch,
+    roleOnly: templateScope === "role_only",
   };
 
   const cfTemplateContent =
@@ -346,31 +348,57 @@ export const AwsConnectionCenter: React.FC<AwsConnectionCenterProps> = ({
 
             {/* Template Viewer & Copier */}
             <div className="space-y-2">
-              <div className="flex justify-between items-center text-xs text-gray-400">
-                <div className="flex items-center space-x-2">
-                  <span>Template Format:</span>
-                  <button
-                    type="button"
-                    onClick={() => setTemplateFormat("yaml")}
-                    className={`px-2 py-0.5 rounded ${
-                      templateFormat === "yaml"
-                        ? "bg-gray-700 text-white font-bold"
-                        : "text-gray-400 hover:text-gray-200"
-                    }`}
-                  >
-                    YAML
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setTemplateFormat("json")}
-                    className={`px-2 py-0.5 rounded ${
-                      templateFormat === "json"
-                        ? "bg-gray-700 text-white font-bold"
-                        : "text-gray-400 hover:text-gray-200"
-                    }`}
-                  >
-                    JSON
-                  </button>
+              <div className="flex flex-wrap justify-between items-center text-xs text-gray-400 gap-2">
+                <div className="flex items-center space-x-3">
+                  <div className="flex items-center space-x-1 bg-gray-950 p-1 rounded-lg border border-gray-800">
+                    <button
+                      type="button"
+                      onClick={() => setTemplateScope("role_only")}
+                      className={`px-2.5 py-1 rounded text-xs transition-colors ${
+                        templateScope === "role_only"
+                          ? "bg-amber-600 text-white font-semibold"
+                          : "text-gray-400 hover:text-gray-200"
+                      }`}
+                    >
+                      🛡️ Role Only ($0 Free)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setTemplateScope("full")}
+                      className={`px-2.5 py-1 rounded text-xs transition-colors ${
+                        templateScope === "full"
+                          ? "bg-amber-600 text-white font-semibold"
+                          : "text-gray-400 hover:text-gray-200"
+                      }`}
+                    >
+                      📦 Full Infrastructure
+                    </button>
+                  </div>
+
+                  <div className="flex items-center space-x-1">
+                    <button
+                      type="button"
+                      onClick={() => setTemplateFormat("yaml")}
+                      className={`px-2 py-0.5 rounded ${
+                        templateFormat === "yaml"
+                          ? "bg-gray-700 text-white font-bold"
+                          : "text-gray-400 hover:text-gray-200"
+                      }`}
+                    >
+                      YAML
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setTemplateFormat("json")}
+                      className={`px-2 py-0.5 rounded ${
+                        templateFormat === "json"
+                          ? "bg-gray-700 text-white font-bold"
+                          : "text-gray-400 hover:text-gray-200"
+                      }`}
+                    >
+                      JSON
+                    </button>
+                  </div>
                 </div>
                 <button
                   type="button"

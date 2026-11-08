@@ -10,15 +10,118 @@ export interface CloudFormationOptions {
   awsRegion?: string;
   stackName?: string;
   enableGpuBatch?: boolean;
+  roleOnly?: boolean;
 }
 
 export const DEFAULT_CONTROL_PLANE_ACCOUNT_ID = "891377192456";
 export const DEFAULT_CONTROL_PLANE_ROLE = "NovaVidControlPlaneRole";
 
 /**
+ * Generates a lean, $0.00 cost, IAM-only onboarding CloudFormation template.
+ * Creates strictly the NovaVidCustomerExecutionRole and NovaVidExecutionPolicy.
+ * Does not create S3 buckets, ECR repositories, Batch environments, or EC2 instances.
+ */
+export function generateCustomerRoleOnboardingTemplate(options: CloudFormationOptions): string {
+  const controlPlaneAccountId = options.controlPlaneAccountId || DEFAULT_CONTROL_PLANE_ACCOUNT_ID;
+  const cleanTenant = options.tenantId.toLowerCase().replace(/[^a-z0-9-]/g, "-").slice(0, 20);
+
+  return `AWSTemplateFormatVersion: '2010-09-09'
+Description: 'NovaVid AI Studio 2.0 — Customer-Owned AWS Onboarding Role & Security Policy'
+
+Parameters:
+  NovaVidControlPlaneAccountId:
+    Type: String
+    Default: '${controlPlaneAccountId}'
+    Description: 'NovaVid central SaaS control plane AWS Account ID.'
+  TenantExternalId:
+    Type: String
+    Default: '${options.externalId}'
+    Description: 'Unique secure tenant External ID for STS AssumeRole delegation.'
+  TenantIdentifier:
+    Type: String
+    Default: '${cleanTenant}'
+    Description: 'Tenant short identifier for resource naming.'
+
+Resources:
+  # Cross-account execution role assumed by NovaVid Control Plane
+  NovaVidCustomerExecutionRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      RoleName: !Sub 'NovaVidExecutionRole-\${TenantIdentifier}'
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              AWS: !Sub 'arn:aws:iam::\${NovaVidControlPlaneAccountId}:root'
+            Action: 'sts:AssumeRole'
+            Condition:
+              StringEquals:
+                'sts:ExternalId': !Ref TenantExternalId
+      Tags:
+        - Key: 'ManagedBy'
+          Value: 'NovaVid-AI-Studio'
+        - Key: 'TenantId'
+          Value: !Ref TenantIdentifier
+
+  # Least-privilege scoped permissions for rendering, storage and telemetry
+  NovaVidExecutionPolicy:
+    Type: 'AWS::IAM::Policy'
+    Properties:
+      PolicyName: !Sub 'NovaVidExecutionPolicy-\${TenantIdentifier}'
+      Roles:
+        - !Ref NovaVidCustomerExecutionRole
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          # S3 access strictly restricted to the customer tenant buckets
+          - Sid: S3CustomerMediaAccess
+            Effect: Allow
+            Action:
+              - 's3:PutObject'
+              - 's3:GetObject'
+              - 's3:DeleteObject'
+              - 's3:ListBucket'
+              - 's3:GetBucketLocation'
+            Resource:
+              - !Sub 'arn:aws:s3:::novavid-\${TenantIdentifier}-*'
+              - !Sub 'arn:aws:s3:::novavid-\${TenantIdentifier}-*/*'
+
+          # CloudWatch Logs for render job execution telemetry
+          - Sid: CloudWatchLogTelemetry
+            Effect: Allow
+            Action:
+              - 'logs:CreateLogGroup'
+              - 'logs:CreateLogStream'
+              - 'logs:PutLogEvents'
+              - 'logs:DescribeLogStreams'
+            Resource:
+              - !Sub 'arn:aws:logs:\${AWS::Region}:\${AWS::AccountId}:log-group:/novavid/*'
+
+          # Read-only quota inspection for GPU instances
+          - Sid: ServiceQuotasInspection
+            Effect: Allow
+            Action:
+              - 'servicequotas:GetServiceQuota'
+              - 'servicequotas:ListServiceQuotas'
+            Resource: '*'
+
+Outputs:
+  RoleArn:
+    Description: 'Cross-account IAM Role ARN to paste into NovaVid AI Studio'
+    Value: !GetAtt NovaVidCustomerExecutionRole.Arn
+    Export:
+      Name: !Sub '\${AWS::StackName}-RoleArn'
+`;
+}
+
+/**
  * Generates an AWS CloudFormation YAML template for customer account deployment.
  */
 export function generateCloudFormationYaml(options: CloudFormationOptions): string {
+  if (options.roleOnly) {
+    return generateCustomerRoleOnboardingTemplate(options);
+  }
   const controlPlaneAccountId = options.controlPlaneAccountId || DEFAULT_CONTROL_PLANE_ACCOUNT_ID;
   const cleanTenant = options.tenantId.toLowerCase().replace(/[^a-z0-9-]/g, "-").slice(0, 20);
 

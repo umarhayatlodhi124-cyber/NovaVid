@@ -115,13 +115,21 @@ export function removeAwsConnection(tenantId: string): void {
   }
 }
 
+import { executeLiveAwsStsAssumeRole } from "./awsStsVerifier";
+
 /**
- * Simulates or verifies STS AssumeRole credentials with external ID.
+ * Executes or verifies STS AssumeRole credentials with external ID against AWS STS.
+ * Never returns fake passes in live environments.
  */
 export async function verifyAwsCrossAccountAccess(
-  connection: AwsAccountConnection
+  connection: AwsAccountConnection,
+  options?: {
+    controlPlaneCredentials?: { accessKeyId: string; secretAccessKey: string; sessionToken?: string };
+    allowSimulationInDev?: boolean;
+  }
 ): Promise<{
   success: boolean;
+  status: "VERIFIED" | "ACCESS_DENIED" | "INVALID_PARAMETERS" | "BLOCKED" | "ROLE_NOT_FOUND";
   message: string;
   assumedRoleUser?: string;
   stsSessionExpiry?: string;
@@ -129,6 +137,7 @@ export async function verifyAwsCrossAccountAccess(
   if (!validateAwsAccountId(connection.accountId)) {
     return {
       success: false,
+      status: "INVALID_PARAMETERS",
       message: "Invalid AWS Account ID. Must be exactly 12 digits.",
     };
   }
@@ -136,6 +145,7 @@ export async function verifyAwsCrossAccountAccess(
   if (!validateAwsRoleArn(connection.roleArn)) {
     return {
       success: false,
+      status: "INVALID_PARAMETERS",
       message: "Invalid IAM Role ARN. Must match arn:aws:iam::<account-id>:role/<role-name>",
     };
   }
@@ -143,6 +153,7 @@ export async function verifyAwsCrossAccountAccess(
   if (!connection.externalId || connection.externalId.length < 8) {
     return {
       success: false,
+      status: "INVALID_PARAMETERS",
       message: "Missing or invalid External ID. Must be at least 8 characters.",
     };
   }
@@ -152,17 +163,47 @@ export async function verifyAwsCrossAccountAccess(
   if (roleAccountMatch && roleAccountMatch[1] !== connection.accountId) {
     return {
       success: false,
+      status: "INVALID_PARAMETERS",
       message: `Role ARN account (${roleAccountMatch[1]}) does not match Account ID (${connection.accountId}).`,
     };
   }
 
-  // Realistic STS verification simulation (in cloud backend this invokes AWS STS AssumeRole)
-  const expiry = new Date(Date.now() + 3600 * 1000).toISOString();
+  // If live credentials provided, execute real AWS STS AssumeRole call
+  if (options?.controlPlaneCredentials?.accessKeyId && options?.controlPlaneCredentials?.secretAccessKey) {
+    const liveResult = await executeLiveAwsStsAssumeRole({
+      tenantId: connection.tenantId,
+      accountId: connection.accountId,
+      roleArn: connection.roleArn,
+      externalId: connection.externalId,
+      region: connection.region || "us-east-1",
+      controlPlaneCredentials: options.controlPlaneCredentials,
+    });
+    return {
+      success: liveResult.success,
+      status: liveResult.status,
+      message: liveResult.message,
+      assumedRoleUser: liveResult.assumedRoleArn,
+      stsSessionExpiry: liveResult.sessionExpiry,
+    };
+  }
+
+  // If running in explicit offline test simulation mode
+  if (options?.allowSimulationInDev) {
+    const expiry = new Date(Date.now() + 3600 * 1000).toISOString();
+    return {
+      success: true,
+      status: "VERIFIED",
+      message: "STS AssumeRole test simulation succeeded.",
+      assumedRoleUser: `${connection.roleArn}/novavid-session-${Date.now().toString(36)}`,
+      stsSessionExpiry: expiry,
+    };
+  }
+
+  // In production / live verification without configured control plane credentials, honestly report BLOCKED
   return {
-    success: true,
-    message: "STS AssumeRole succeeded. Temporary session credentials acquired.",
-    assumedRoleUser: `${connection.roleArn}/novavid-session-${Date.now().toString(36)}`,
-    stsSessionExpiry: expiry,
+    success: false,
+    status: "BLOCKED",
+    message: "REAL AWS STS CALL BLOCKED: Control Plane AWS credentials (AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY) are not set. Cannot execute authentic AWS STS AssumeRole without credentials.",
   };
 }
 

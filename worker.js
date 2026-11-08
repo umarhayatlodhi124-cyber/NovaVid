@@ -48,6 +48,111 @@ export default {
       );
     }
 
+    // Real AWS STS AssumeRole verification endpoint
+    if (url.pathname === "/api/aws/verify-sts" && request.method === "POST") {
+      try {
+        const body = await request.json();
+        const { tenantId, accountId, roleArn, externalId, region } = body;
+
+        if (!tenantId || !accountId || !roleArn || !externalId) {
+          return new Response(
+            JSON.stringify({
+              success: false,
+              status: "INVALID_PARAMETERS",
+              message: "Missing required parameters: tenantId, accountId, roleArn, and externalId are required.",
+            }),
+            { status: 400, headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" } }
+          );
+        }
+
+        // Validate account ID matches Role ARN prefix
+        const roleMatch = roleArn.match(/^arn:aws:iam::(\d{12}):role\/[\w+=,.@-]+$/);
+        if (!roleMatch || roleMatch[1] !== accountId) {
+          return new Response(
+            JSON.stringify({
+              success: false,
+              status: "INVALID_PARAMETERS",
+              message: `Role ARN account ID mismatch. Role ARN specifies '${roleMatch ? roleMatch[1] : "INVALID"}', expected '${accountId}'.`,
+            }),
+            { status: 400, headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" } }
+          );
+        }
+
+        // Check if Control Plane credentials are set in Cloudflare Worker environment
+        if (!env?.AWS_ACCESS_KEY_ID || !env?.AWS_SECRET_ACCESS_KEY) {
+          return new Response(
+            JSON.stringify({
+              success: false,
+              status: "BLOCKED",
+              message:
+                "REAL AWS STS CALL BLOCKED: Control Plane AWS credentials (AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY) are not set in Cloudflare Worker environment secrets. Live STS verification cannot dispatch until configured.",
+              timestamp: new Date().toISOString(),
+            }),
+            { status: 503, headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" } }
+          );
+        }
+
+        // If credentials are set, execute AWS STS request
+        const stsHost = "sts.amazonaws.com";
+        const sessionName = `novavid-${tenantId.slice(0, 10)}-${Date.now().toString(36)}`;
+        const bodyParams = new URLSearchParams({
+          Action: "AssumeRole",
+          Version: "2011-06-15",
+          RoleArn: roleArn,
+          RoleSessionName: sessionName,
+          ExternalId: externalId,
+          DurationSeconds: "3600",
+        });
+
+        // Forward to AWS STS endpoint
+        const stsResp = await fetch(`https://${stsHost}/`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/x-www-form-urlencoded; charset=utf-8",
+          },
+          body: bodyParams.toString(),
+        });
+
+        const respText = await stsResp.text();
+
+        if (!stsResp.ok) {
+          const codeMatch = respText.match(/<Code>([\w.-]+)<\/Code>/);
+          const msgMatch = respText.match(/<Message>([^<]+)<\/Message>/);
+          return new Response(
+            JSON.stringify({
+              success: false,
+              status: "ACCESS_DENIED",
+              rawAwsErrorCode: codeMatch ? codeMatch[1] : `HTTP_${stsResp.status}`,
+              message: msgMatch ? msgMatch[1] : respText,
+              timestamp: new Date().toISOString(),
+            }),
+            { status: 403, headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" } }
+          );
+        }
+
+        const roleArnMatch = respText.match(/<Arn>([^<]+)<\/Arn>/);
+        const expiryMatch = respText.match(/<Expiration>([^<]+)<\/Expiration>/);
+
+        return new Response(
+          JSON.stringify({
+            success: true,
+            status: "VERIFIED",
+            assumedRoleArn: roleArnMatch ? roleArnMatch[1] : `${roleArn}/${sessionName}`,
+            accountId,
+            sessionExpiry: expiryMatch ? expiryMatch[1] : new Date(Date.now() + 3600000).toISOString(),
+            message: `AWS STS AssumeRole verified successfully against AWS.`,
+            timestamp: new Date().toISOString(),
+          }),
+          { status: 200, headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" } }
+        );
+      } catch (err) {
+        return new Response(
+          JSON.stringify({ success: false, error: err instanceof Error ? err.message : String(err) }),
+          { status: 400, headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" } }
+        );
+      }
+    }
+
     // Multi-tenant automation status & health
     if (url.pathname === "/api/automation/status") {
       return new Response(

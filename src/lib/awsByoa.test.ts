@@ -98,10 +98,35 @@ describe("AWS BYOA Broker & Service Quota Service", () => {
       estimatedMonthlySpendUsd: 12.5,
     };
 
-    const result = await verifyAwsCrossAccountAccess(conn);
+    const result = await verifyAwsCrossAccountAccess(conn, { allowSimulationInDev: true });
     expect(result.success).toBe(true);
     expect(result.assumedRoleUser).toContain("arn:aws:iam::123456789012:role/NovaVidExecutionRole");
     expect(result.stsSessionExpiry).toBeDefined();
+  });
+
+  it("should return BLOCKED when live verification is attempted without control plane credentials", async () => {
+    const conn: AwsAccountConnection = {
+      tenantId: "tenant_abc",
+      accountId: "123456789012",
+      roleArn: "arn:aws:iam::123456789012:role/NovaVidExecutionRole",
+      externalId: "novavid-secret-ext-id",
+      region: "us-east-1",
+      bucketName: "novavid-tenant_abc-media-us-east-1",
+      status: "pending_deployment",
+      gpuQuota: {
+        instanceFamily: "G4dn",
+        quotaCode: "L-384A81E9",
+        quotaValue: 0,
+        sufficient: false,
+        message: "No connection",
+      },
+      estimatedMonthlySpendUsd: 0,
+    };
+
+    const result = await verifyAwsCrossAccountAccess(conn);
+    expect(result.success).toBe(false);
+    expect(result.status).toBe("BLOCKED");
+    expect(result.message).toContain("REAL AWS STS CALL BLOCKED");
   });
 
   it("should reject STS access if account ID does not match role ARN", async () => {
