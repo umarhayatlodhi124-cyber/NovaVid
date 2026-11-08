@@ -2,7 +2,6 @@ import { describe, it, expect } from "vitest";
 import {
   calculateBenchmarkCost,
   generateDurationBenchmarkMatrix,
-  NEURAL_PROVIDER_BENCHMARKS,
   NeuralAvatarInferenceService,
 } from "./neuralAvatarEngine";
 
