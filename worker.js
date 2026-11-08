@@ -136,7 +136,7 @@ export default {
     if (url.pathname === "/api/cloud-render/dispatch" && request.method === "POST") {
       try {
         const body = await request.json();
-        const { tenantId, projectId, title, profile, aspectRatio, idempotencyKey } = body;
+        const { tenantId, projectId, title, profile, aspectRatio, idempotencyKey, scenes } = body;
 
         if (!tenantId || !projectId) {
           return new Response(
@@ -145,43 +145,81 @@ export default {
           );
         }
 
-        const jobId = `render_${tenantId}_${Date.now()}`;
         const key = idempotencyKey || `idem_${tenantId}_${projectId}_${aspectRatio || "16:9"}`;
+        const localJobId = `render_${tenantId}_${Date.now()}`;
+        let providerJobId = null;
+        let providerUsed = "unassigned";
+
+        // Protocol A: RunPod Serverless (/run)
+        if (env?.RUNPOD_ENDPOINT_ID && env?.RUNPOD_API_KEY) {
+          try {
+            providerUsed = "runpod_serverless";
+            const runpodResp = await fetch(`https://api.runpod.ai/v2/${env.RUNPOD_ENDPOINT_ID}/run`, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${env.RUNPOD_API_KEY}`,
+              },
+              body: JSON.stringify({
+                input: {
+                  action: "render_video",
+                  job_id: localJobId,
+                  tenant_id: tenantId,
+                  project_id: projectId,
+                  title: title || "Untitled Video",
+                  scenes: scenes || [],
+                  aspect_ratio: aspectRatio || "16:9",
+                  profile: profile || "broadcast_vbr_1080p",
+                },
+              }),
+            });
+
+            if (runpodResp.ok) {
+              const runpodData = await runpodResp.json();
+              providerJobId = runpodData.id;
+            }
+          } catch (e) {
+            console.error("[Cloudflare Gateway] RunPod dispatch error:", e);
+          }
+        }
+        // Protocol B: Custom GPU Worker REST API (/api/render-video)
+        else if (env?.GPU_RENDER_WORKER_URL) {
+          providerUsed = "custom_gpu_worker";
+          ctx.waitUntil(
+            fetch(`${env.GPU_RENDER_WORKER_URL}/api/render-video`, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                ...(env.WORKER_AUTH_TOKEN ? { Authorization: `Bearer ${env.WORKER_AUTH_TOKEN}` } : {}),
+              },
+              body: JSON.stringify({
+                job_id: localJobId,
+                tenant_id: tenantId,
+                project_id: projectId,
+                title: title || "Untitled Cloud Video",
+                scenes: scenes || [],
+              }),
+            }).catch((e) => console.error("[Cloudflare Gateway] GPU dispatch forward error:", e))
+          );
+        }
 
         const renderJobReceipt = {
-          jobId,
+          jobId: providerJobId || localJobId,
+          localJobId,
+          providerJobId,
+          providerUsed,
           idempotencyKey: key,
           tenantId,
           projectId,
           title: title || "Untitled Cloud Video",
           profile: profile || "broadcast_vbr_1080p",
           aspectRatio: aspectRatio || "16:9",
-          status: "queued",
-          progressPercent: 0,
-          firestorePath: `tenants/${tenantId}/render_jobs/${jobId}`,
-          dispatchedTo: env?.GPU_RENDER_WORKER_URL ? "gpu_cloud_worker" : "container_render_cluster",
-          gpuWorkerEndpoint: env?.GPU_RENDER_WORKER_URL || null,
-          maxConcurrency: 2,
-          retriesConfigured: 3,
+          status: providerJobId ? "submitted_to_provider" : env?.GPU_RENDER_WORKER_URL ? "forwarded" : "queued",
+          progressPercent: providerJobId ? 10 : 0,
+          firestorePath: `tenants/${tenantId}/render_jobs/${localJobId}`,
+          dispatchedTo: providerUsed,
           submittedAt: new Date().toISOString(),
         };
-
-        // If a remote GPU worker is configured, forward dispatch asynchronously
-        if (env?.GPU_RENDER_WORKER_URL) {
-          ctx.waitUntil(
-            fetch(`${env.GPU_RENDER_WORKER_URL}/api/render-video`, {
-              method: "POST",
-              headers: { "Content-Type": "application/json", Authorization: `Bearer ${env.WORKER_AUTH_TOKEN || ""}` },
-              body: JSON.stringify({
-                job_id: jobId,
-                tenant_id: tenantId,
-                project_id: projectId,
-                title: title || "Untitled Cloud Video",
-                scenes: body.scenes || [],
-              }),
-            }).catch((e) => console.error("[Cloudflare Gateway] GPU dispatch forward error:", e))
-          );
-        }
 
         return new Response(JSON.stringify(renderJobReceipt), {
           status: 200,
@@ -198,22 +236,57 @@ export default {
       }
     }
 
-    // Cloud Render Worker job status endpoint
+    // Cloud Render Worker job status endpoint (Authentic querying, zero mock statuses)
     if (url.pathname.startsWith("/api/cloud-render/status") && request.method === "GET") {
       const jobId = url.searchParams.get("jobId") || url.pathname.split("/").pop();
+
+      // Check RunPod Serverless status if configured
+      if (env?.RUNPOD_ENDPOINT_ID && env?.RUNPOD_API_KEY && jobId) {
+        try {
+          const runpodStatusResp = await fetch(`https://api.runpod.ai/v2/${env.RUNPOD_ENDPOINT_ID}/status/${jobId}`, {
+            headers: { Authorization: `Bearer ${env.RUNPOD_API_KEY}` },
+          });
+          if (runpodStatusResp.ok) {
+            const runpodStatusData = await runpodStatusResp.json();
+            return new Response(JSON.stringify(runpodStatusData), {
+              status: 200,
+              headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
+            });
+          }
+        } catch (e) {
+          console.error("[Cloudflare Gateway] Error querying RunPod status:", e);
+        }
+      }
+
+      // Check custom GPU worker status if configured
+      if (env?.GPU_RENDER_WORKER_URL && jobId) {
+        try {
+          const workerResp = await fetch(`${env.GPU_RENDER_WORKER_URL}/api/status/${jobId}`, {
+            headers: env.WORKER_AUTH_TOKEN ? { Authorization: `Bearer ${env.WORKER_AUTH_TOKEN}` } : {},
+          });
+          if (workerResp.ok) {
+            const workerData = await workerResp.json();
+            return new Response(JSON.stringify(workerData), {
+              status: 200,
+              headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
+            });
+          }
+        } catch (e) {
+          console.error("[Cloudflare Gateway] Error querying GPU worker status:", e);
+        }
+      }
+
+      // If no remote worker is configured in Cloudflare secrets, return an honest not_configured status
       return new Response(
         JSON.stringify({
           jobId,
-          status: "completed",
-          progressPercent: 100,
-          videoBitrate: "6000kbps Constrained VBR",
-          audioBitrate: "192kbps AAC",
-          resolution: "1920x1080 Full HD",
-          cloudStorageUrl: `https://novavid-exports-cloud.s3.amazonaws.com/exports/${jobId}.mp4`,
+          status: "not_configured",
+          message:
+            "No remote GPU execution worker (RunPod/Modal/Fargate) is actively configured in Cloudflare environment secrets. Set GPU_RENDER_WORKER_URL or RUNPOD_ENDPOINT_ID.",
           verifiedAt: new Date().toISOString(),
         }),
         {
-          status: 200,
+          status: 503,
           headers: {
             "Content-Type": "application/json",
             "Access-Control-Allow-Origin": "*",
