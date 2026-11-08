@@ -274,11 +274,11 @@ export class ClaudeProviderAdapter {
 
   async testConnection(billingConfirmed = false): Promise<ProviderConnectionResult & { status: ProviderStatus }> {
     const config = validateProviderConfig(this.config);
-    if (!billingConfirmed) {
-      return { connected: false, status: "error", message: "Confirm the potentially billable Claude connection test before continuing.", fallbackOccurred: false };
-    }
     if (!config.credentialConfigured) {
       return { connected: false, status: "disconnected", message: "Save a Claude API key in Windows Credential Manager before testing.", fallbackOccurred: false };
+    }
+    if (!billingConfirmed) {
+      return { connected: false, status: "error", message: "Confirm the potentially billable Claude connection test before continuing.", fallbackOccurred: false };
     }
     try {
       const result = await invoke<ProviderConnectionResult>("provider_test_connection", {

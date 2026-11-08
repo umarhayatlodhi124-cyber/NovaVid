@@ -31,6 +31,39 @@ export function detectAvatarHardwareCompatibility(): HardwareCompatibility {
     note: "Dedicated GPU not detected or uninitialized. Using 2D Synthetic Viseme Rig (Offline Heuristic Fallback).",
   };
 }
+
+export interface NeuralAvatarAcceptance {
+  status: "VERIFIED" | "NOT VERIFIED";
+  reason: string;
+  fallbackActive: boolean;
+  neuralWeightsPresent: boolean;
+  cudaAvailable: boolean;
+}
+
+export function verifyNeuralAvatarAvailability(
+  installedCheckpoints: { liveportrait?: boolean; sadtalker?: boolean } = {}
+): NeuralAvatarAcceptance {
+  const hw = detectAvatarHardwareCompatibility();
+  const hasLocalWeights = Boolean(installedCheckpoints.liveportrait || installedCheckpoints.sadtalker);
+
+  if (!hw.hasDedicatedGpu || !hasLocalWeights) {
+    return {
+      status: "NOT VERIFIED",
+      reason: "Neural model checkpoints (LivePortrait / SadTalker) are absent from local filesystem and dedicated CUDA GPU is uninitialized. Heuristic 2D viseme fallback active.",
+      fallbackActive: true,
+      neuralWeightsPresent: hasLocalWeights,
+      cudaAvailable: hw.hasDedicatedGpu,
+    };
+  }
+
+  return {
+    status: "VERIFIED",
+    reason: "Dedicated CUDA GPU and compatible neural talking-head checkpoints validated.",
+    fallbackActive: false,
+    neuralWeightsPresent: true,
+    cudaAvailable: true,
+  };
+}
 export type AvatarLayout = "full_screen" | "split_screen" | "picture_in_picture";
 export type TaleemiDuniyaMode =
   | "promotional"

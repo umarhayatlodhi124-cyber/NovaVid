@@ -20,7 +20,7 @@
       }
     ],
     "security": {
-      "csp": "default-src 'self'; img-src 'self' asset: http://asset.localhost data: blob: https:; media-src 'self' asset: http://asset.localhost blob:; style-src 'self' 'unsafe-inline'; font-src 'self'; connect-src ipc: http://ipc.localhost https://*.firebaseio.com https://*.googleapis.com https://*.firebaseapp.com https://*.workers.dev https://*.cloudfunctions.net"
+      "csp": "default-src 'self'; img-src 'self' asset: http://asset.localhost data: blob: https:; media-src 'self' asset: http://asset.localhost blob:; style-src 'self' 'unsafe-inline'; font-src 'self'; connect-src ipc: http://ipc.localhost https://*.firebaseio.com https://*.googleapis.com https://*.firebaseapp.com https://*.workers.dev https://*.cloudfunctions.net https://api.anthropic.com https://api.elevenlabs.io"
     }
   },
   "bundle": {
