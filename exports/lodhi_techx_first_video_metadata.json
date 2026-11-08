@@ -1,0 +1,29 @@
+{
+  "projectId": "lodhi_techx_ai_intro_master",
+  "title": "LODHI TECHX — AI Technology Introduction",
+  "description": "Official demonstration of NovaVid AI Studio 2.0 by LODHI TECHX.\n\nFeatures:\n• End-to-end autonomous AI video creation\n• Studio-grade Urdu neural voice narration\n• 1080p 60fps high-definition rendering\n• Multi-tenant cloud synchronization\n• Automated YouTube channel publishing\n\nBrand Owner: LODHI TECHX\nWebsite: https://novavid-ecfc8.web.app\nPrivacy: Private (Acceptance Verification Test)",
+  "tags": [
+    "LODHI TECHX",
+    "NovaVid",
+    "AI Technology",
+    "AI Video Creation",
+    "YouTube Automation",
+    "Urdu AI Voice",
+    "Pakistan Tech",
+    "SaaS"
+  ],
+  "categoryId": "28",
+  "privacyStatus": "private",
+  "madeForKids": false,
+  "language": "ur",
+  "defaultAudioLanguage": "ur",
+  "filePath": "G:\\Nova Vid\\exports\\LODHI_TECHX_AI_Technology_Introduction.mp4",
+  "fileSizeBytes": 3272362,
+  "durationSeconds": 87.1,
+  "resolution": "1920x1080",
+  "subtitlesFile": "G:\\Nova Vid\\exports\\lodhi_techx_subtitles.srt",
+  "narrationAudioFile": "G:\\Nova Vid\\exports\\lodhi_narration_urdu_full.wav",
+  "mixedAudioFile": "G:\\Nova Vid\\exports\\lodhi_master_audio_mixed.wav",
+  "channelId": "UCL1USyVzIikDT-K1OIg69_w",
+  "channelTitle": "Lodhi TechX"
+}
