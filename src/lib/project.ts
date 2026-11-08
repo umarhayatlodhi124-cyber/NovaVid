@@ -25,6 +25,18 @@ export interface ProjectInput {
   language: string;
 }
 
+export interface ProjectArchive {
+  version: "2.0";
+  exportedAt: string;
+  project: Project;
+  research?: unknown;
+  script?: unknown;
+  storyboard?: unknown;
+  subtitles?: unknown;
+  timeline?: unknown;
+  seo?: unknown;
+}
+
 export function isSupportedProjectLanguage(value: string): value is ProjectLanguage {
   return PROJECT_LANGUAGES.includes(value as ProjectLanguage);
 }

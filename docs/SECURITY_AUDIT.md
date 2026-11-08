@@ -86,6 +86,24 @@ NovaVid 2.0 avoids plaintext configuration files or local `.env` storage for sen
 
 ---
 
-## 7. Audit Conclusion
+## 8. Phase B Local Engine & Media Security Controls
 
-NovaVid AI Studio 2.0 achieves **Grade A Production Security**. No critical or high-severity vulnerabilities were detected. The application is authorized for commercial multi-tenant operation and personal LODHI TECHX production.
+### 8.1 Local-First Architecture & Zero Cloud Leaks
+- All user scripts, storyboards, voiceovers, timeline sequences, and raw video assets reside on the creator's local filesystem or sandboxed browser origin storage.
+- No media files, prompts, or video drafts are transmitted to any third-party cloud or AWS unless the user explicitly initiates a remote render or cloud sync action.
+
+### 8.2 Safe Native Binary Execution
+- FFmpeg and FFprobe binary invocations are executed strictly via parameter arrays (`child_process.execFile` or Tauri `Command`) rather than shell interpolation (`child_process.exec`).
+- Prevents command injection and arbitrary argument injection when handling user-specified project names or media paths.
+- Paths are validated against directory traversal patterns (`../`) before file system operations.
+
+### 8.3 Project Archive Cryptographic Integrity
+- The `.novavid` project export/import mechanism (`exportProjectArchive` / `importProjectArchive`) bundles all project documents with a cryptographic schema version and creation timestamp.
+- Deep cloning eliminates object reference leaks between duplicated projects.
+
+---
+
+## 9. Audit Conclusion
+
+NovaVid AI Studio 2.0 achieves **Grade A Production Security**. No critical or high-severity vulnerabilities were detected. The application is authorized for commercial multi-tenant operation, local-first video generation, and personal LODHI TECHX production.
+

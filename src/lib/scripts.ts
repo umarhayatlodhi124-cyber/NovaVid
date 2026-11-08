@@ -68,11 +68,11 @@ export function createScriptDocument(input: {
   };
 }
 
-export function createScriptVersion(document: ScriptDocument, nextContent: string): ScriptDocument {
+export function createScriptVersion(document: ScriptDocument, nextContent: string, customLabel?: string): ScriptDocument {
   const timestamp = new Date().toISOString();
   const version: ScriptVersion = {
     id: `version-${crypto.randomUUID()}`,
-    label: `Revision ${document.versions.length + 1}`,
+    label: customLabel || `Revision ${document.versions.length + 1}`,
     createdAt: timestamp,
     content: nextContent,
   };
@@ -100,6 +100,33 @@ export function restoreScriptVersion(document: ScriptDocument, versionId: string
   };
 }
 
+/**
+ * Regenerates or modifies a specific paragraph within a script without overwriting the whole document.
+ */
+export function regenerateScriptParagraph(
+  document: ScriptDocument,
+  targetSnippetOrIndex: string | number,
+  newParagraphContent: string
+): ScriptDocument {
+  let updatedContent = document.content;
+
+  if (typeof targetSnippetOrIndex === "number") {
+    const paragraphs = document.content.split("\n\n");
+    if (targetSnippetOrIndex >= 0 && targetSnippetOrIndex < paragraphs.length) {
+      paragraphs[targetSnippetOrIndex] = newParagraphContent.trim();
+      updatedContent = paragraphs.join("\n\n");
+    }
+  } else {
+    if (document.content.includes(targetSnippetOrIndex)) {
+      updatedContent = document.content.replace(targetSnippetOrIndex, newParagraphContent.trim());
+    } else {
+      updatedContent = `${document.content}\n\n${newParagraphContent.trim()}`;
+    }
+  }
+
+  return createScriptVersion(document, updatedContent, `Paragraph revised (${new Date().toLocaleTimeString()})`);
+}
+
 export function buildScriptContent({
   title,
   topic,
@@ -115,7 +142,7 @@ export function buildScriptContent({
   const safeTopic = topic.trim();
   const hook =
     language === "Urdu"
-      ? `Ø¢Ø¬ ÛÙ… ${safeTopic} Ú©Û’ Ø¨Ø§Ø±Û’ Ù…ÛŒÚº Ø³ÛŒÚ©Ú¾ÛŒÚº Ú¯Û’Û”`
+      ? `آج ہم ${safeTopic} کے بارے میں سیکھیں گے۔`
       : language === "Roman Urdu"
         ? `Aaj hum ${safeTopic} ke baray mein seekhien gay.`
         : `Today we are learning about ${safeTopic}.`;
@@ -136,7 +163,7 @@ export function buildScriptContent({
     "4. Connect each idea to a practical takeaway.",
     "",
     "Transition:",
-    "Now that the core idea is clear, letâ€™s go into the practical steps and examples.",
+    "Now that the core idea is clear, let's go into the practical steps and examples.",
     "",
     "Conclusion:",
     "The goal is to make the topic easy to understand and actionable for creators.",

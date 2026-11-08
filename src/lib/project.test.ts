@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { normalizeProjectInput } from "./project";
+import {
+  createProject,
+  getProject,
+  duplicateProject,
+  exportProjectArchive,
+  importProjectArchive,
+} from "./projects";
 
 describe("normalizeProjectInput", () => {
   it("trims project fields before saving", () => {
@@ -65,5 +72,35 @@ describe("normalizeProjectInput", () => {
         language: "English",
       }),
     ).toThrow("Video topics must be 500 characters or fewer.");
+  });
+});
+
+describe("Project Duplication & Portable Archiving", () => {
+  it("creates, retrieves, duplicates and exports project archives", async () => {
+    const created = await createProject({
+      name: "Lodhi TechX Original",
+      topic: "Autonomous AI Video Studio Engine",
+      language: "Urdu",
+    });
+
+    expect(created.id).toBeDefined();
+    expect(created.name).toBe("Lodhi TechX Original");
+
+    const fetched = await getProject(created.id);
+    expect(fetched).not.toBeNull();
+    expect(fetched?.name).toBe("Lodhi TechX Original");
+
+    const duplicated = await duplicateProject(created.id, "Lodhi TechX Clone");
+    expect(duplicated.id).not.toBe(created.id);
+    expect(duplicated.name).toBe("Lodhi TechX Clone");
+    expect(duplicated.topic).toBe(created.topic);
+
+    const archive = await exportProjectArchive(created.id);
+    expect(archive.version).toBe("2.0");
+    expect(archive.project.name).toBe("Lodhi TechX Original");
+
+    const imported = await importProjectArchive(archive);
+    expect(imported.id).not.toBe(created.id);
+    expect(imported.name).toContain("Imported");
   });
 });
