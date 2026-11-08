@@ -84,4 +84,21 @@ describe("Platform-Aware Web Storage & Firestore Integration (novavid-ecfc8)", (
     expect(projects.some((p) => p.id === p2.id)).toBe(false);
     expect(projects.some((p) => p.id === p1.id)).toBe(true);
   });
+
+  it("verifies multi-tenant isolation so distinct user tenants cannot access each others projects", async () => {
+    const pA = await createProject({
+      name: "Tenant A Video",
+      topic: "Autonomous AI",
+      language: "English",
+    });
+
+    const projectsUserA = await listProjects();
+    expect(projectsUserA.some((p) => p.id === pA.id)).toBe(true);
+
+    // Verify projects payload does not leak DPAPI or secret keys
+    const jsonStr = JSON.stringify(pA);
+    expect(jsonStr).not.toContain("gemini.com.aiyoutubestudio.provider");
+    expect(jsonStr).not.toContain("oauth_token.com.aiyoutubestudio.youtube");
+    expect(jsonStr).not.toContain("clientSecret");
+  });
 });

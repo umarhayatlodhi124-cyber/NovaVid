@@ -85,6 +85,11 @@ import {
   type ScriptDocument,
   type ScriptFormat,
 } from "./lib/scripts";
+import {
+  auth,
+  subscribeToAuthState,
+} from "./lib/firebase";
+import type { User } from "firebase/auth";
 import { VoiceStudioPage } from "./components/VoiceStudioPage";
 import { SubtitleStudioPage } from "./components/SubtitleStudioPage";
 import { TimelineStudioPage } from "./components/TimelineStudioPage";
@@ -203,6 +208,7 @@ const plannedNavigation = [
 function App() {
   const [view, setView] = useState<View>("dashboard");
   const [projects, setProjects] = useState<Project[]>([]);
+  const [firebaseUser, setFirebaseUser] = useState<User | null>(auth.currentUser);
   const [storageState, setStorageState] = useState<StorageState>("connecting");
   const [storageIssue, setStorageIssue] = useState<string | null>(null);
   const [modalProject, setModalProject] = useState<Project | null | undefined>();
@@ -402,6 +408,13 @@ function App() {
 
   useEffect(() => {
     refreshProjects().catch(() => undefined);
+    if (!isTauriEnvironment()) {
+      const unsub = subscribeToAuthState((u) => {
+        setFirebaseUser(u);
+        refreshProjects().catch(() => undefined);
+      });
+      return () => unsub();
+    }
   }, []);
 
   // Load initial settings and provider config from SQLite repositories
@@ -911,7 +924,9 @@ function App() {
                 storageState === "ready"
                   ? isTauriEnvironment()
                     ? "Projects are stored in the local SQLite database"
-                    : "Projects are synchronized with Cloud Firestore (novavid-ecfc8)"
+                    : firebaseUser
+                      ? `Signed in as ${firebaseUser.email} — Cloud Firestore Synced (novavid-ecfc8)`
+                      : "Local Web Workspace — Guest projects stored on this device"
                   : "Connecting to project storage"
               }
             >
@@ -919,12 +934,20 @@ function App() {
               {storageState === "ready"
                 ? isTauriEnvironment()
                   ? "Local storage ready"
-                  : "Cloud storage ready"
+                  : firebaseUser
+                    ? "Cloud synced"
+                    : "Web workspace"
                 : storageState === "connecting"
                   ? "Connecting"
                   : "Storage unavailable"}
             </div>
-            <div className="topbar-avatar" aria-label="Local workspace">U</div>
+            <div
+              className="topbar-avatar"
+              aria-label="Workspace profile"
+              title={firebaseUser?.email ? `Logged in as ${firebaseUser.email}` : "Local Creator Profile"}
+            >
+              {firebaseUser?.email ? firebaseUser.email[0].toUpperCase() : "U"}
+            </div>
           </div>
         </header>
 

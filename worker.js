@@ -4,6 +4,27 @@
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
+
+    // Health check endpoint for Cloudflare monitoring
+    if (url.pathname === "/api/health") {
+      return new Response(
+        JSON.stringify({
+          status: "healthy",
+          gateway: "Cloudflare Workers",
+          target: "https://novavid-ecfc8.web.app",
+          brand: "LODHI TECHX",
+          timestamp: new Date().toISOString(),
+        }),
+        {
+          status: 200,
+          headers: {
+            "Content-Type": "application/json",
+            "Access-Control-Allow-Origin": "*",
+          },
+        }
+      );
+    }
+
     const targetUrl = new URL(url.pathname + url.search, "https://novavid-ecfc8.web.app");
 
     // Preserve headers while adjusting host
@@ -12,13 +33,31 @@ export default {
     headers.set("X-Forwarded-Host", url.hostname);
     headers.set("X-Forwarded-Proto", url.protocol.replace(":", ""));
 
-    const proxyRequest = new Request(targetUrl.toString(), {
-      method: request.method,
-      headers,
-      body: request.method !== "GET" && request.method !== "HEAD" ? request.body : undefined,
-      redirect: "follow",
-    });
+    try {
+      const proxyRequest = new Request(targetUrl.toString(), {
+        method: request.method,
+        headers,
+        body: request.method !== "GET" && request.method !== "HEAD" ? request.body : undefined,
+        redirect: "follow",
+      });
 
-    return fetch(proxyRequest);
+      return await fetch(proxyRequest);
+    } catch (err) {
+      return new Response(
+        JSON.stringify({
+          error: "Cloud Gateway Error",
+          message: err instanceof Error ? err.message : String(err),
+          target: targetUrl.toString(),
+          timestamp: new Date().toISOString(),
+        }),
+        {
+          status: 502,
+          headers: {
+            "Content-Type": "application/json",
+            "Cache-Control": "no-store",
+          },
+        }
+      );
+    }
   },
 };
