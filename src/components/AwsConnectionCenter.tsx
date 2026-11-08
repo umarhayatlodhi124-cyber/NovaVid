@@ -17,6 +17,7 @@ import {
   removeAwsConnection,
   type AwsAccountConnection,
 } from "../lib/awsByoaService";
+import { buildAwsDeploymentPlan } from "../lib/awsInfrastructureDeployment";
 
 interface AwsConnectionCenterProps {
   tenantId?: string;
@@ -68,6 +69,7 @@ export const AwsConnectionCenter: React.FC<AwsConnectionCenterProps> = ({
   const [avgMinutes, setAvgMinutes] = useState(2);
   const [storageGb, setStorageGb] = useState(25);
   const [useSpotPricing, setUseSpotPricing] = useState(true);
+  const [enableGpuBatch, setEnableGpuBatch] = useState(false);
   const [renderTarget, setRenderTarget] = useState<"byoa_aws" | "runpod_serverless" | "local_host">(
     "byoa_aws"
   );
@@ -79,11 +81,20 @@ export const AwsConnectionCenter: React.FC<AwsConnectionCenterProps> = ({
     useSpotPricing
   );
 
+  const deploymentPlan = buildAwsDeploymentPlan({
+    tenantId,
+    awsAccountId: connection.accountId || accountIdInput,
+    awsRegion: regionInput,
+    gpuQuotaAvailable: connection.gpuQuota.quotaValue,
+    hasRoleConfigured: connection.status === "connected",
+  });
+
   const cfOptions = {
     tenantId,
     externalId: connection.externalId,
     awsRegion: regionInput,
     controlPlaneAccountId: DEFAULT_CONTROL_PLANE_ACCOUNT_ID,
+    enableGpuBatch,
   };
 
   const cfTemplateContent =
@@ -304,6 +315,22 @@ export const AwsConnectionCenter: React.FC<AwsConnectionCenterProps> = ({
               </a>
             </div>
 
+            {/* CloudFormation Stack Configuration Options */}
+            <div className="flex items-center justify-between p-3 bg-gray-950 border border-gray-800 rounded-lg text-xs">
+              <div>
+                <span className="font-semibold text-gray-200">Include AWS Batch & ECR Container Resources</span>
+                <p className="text-[11px] text-gray-400 mt-0.5">
+                  Provisions ECR repository, Batch GPU Job Definition, and autoscaling compute environment.
+                </p>
+              </div>
+              <input
+                type="checkbox"
+                checked={enableGpuBatch}
+                onChange={(e) => setEnableGpuBatch(e.target.checked)}
+                className="accent-amber-500 h-4 w-4 rounded"
+              />
+            </div>
+
             {/* Template Viewer & Copier */}
             <div className="space-y-2">
               <div className="flex justify-between items-center text-xs text-gray-400">
@@ -348,6 +375,71 @@ export const AwsConnectionCenter: React.FC<AwsConnectionCenterProps> = ({
                 className="w-full bg-gray-950 border border-gray-800 rounded-lg p-3 text-xs text-emerald-400 font-mono leading-relaxed focus:outline-none"
               />
             </div>
+          </div>
+
+          {/* Infrastructure Readiness & Security Status Matrix */}
+          <div className="bg-gray-900 border border-gray-800 rounded-xl p-6 space-y-4">
+            <div className="flex justify-between items-center">
+              <div>
+                <h2 className="text-lg font-semibold text-white">
+                  AWS Infrastructure Readiness & Security Status
+                </h2>
+                <p className="text-xs text-gray-400">
+                  Pre-flight validation matrix for customer & owner AWS account components. Zero paid compute active.
+                </p>
+              </div>
+              <span className="px-2.5 py-1 text-xs rounded bg-sky-500/10 text-sky-400 border border-sky-500/30 font-semibold">
+                {deploymentPlan.readinessSummary.readyForGpuWorkloads ? "READY FOR GPU JOBS" : "CONFIGURATION PENDING"}
+              </span>
+            </div>
+
+            <div className="space-y-2">
+              {deploymentPlan.components.map((comp) => (
+                <div
+                  key={comp.componentId}
+                  className="p-3 bg-gray-950 border border-gray-800 rounded-lg flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs"
+                >
+                  <div className="space-y-0.5">
+                    <div className="flex items-center space-x-2">
+                      <span className="font-semibold text-gray-200">{comp.name}</span>
+                      <span
+                        className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
+                          comp.status === "VERIFIED"
+                            ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/30"
+                            : comp.status === "IMPLEMENTED"
+                            ? "bg-sky-500/10 text-sky-400 border border-sky-500/30"
+                            : comp.status === "BLOCKED"
+                            ? "bg-rose-500/10 text-rose-400 border border-rose-500/30"
+                            : "bg-gray-800 text-gray-400"
+                        }`}
+                      >
+                        {comp.status}
+                      </span>
+                      {comp.isPaidResource ? (
+                        <span className="text-[10px] text-amber-400 font-mono">~$0 (idle)</span>
+                      ) : (
+                        <span className="text-[10px] text-emerald-400">FREE</span>
+                      )}
+                    </div>
+                    <p className="text-[11px] text-gray-400">{comp.details}</p>
+                    {comp.blockerReason && (
+                      <p className="text-[11px] text-rose-400 italic">⚠️ Blocker: {comp.blockerReason}</p>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {deploymentPlan.readinessSummary.unresolvedBlockers.length > 0 && (
+              <div className="p-3 bg-amber-950/30 border border-amber-500/30 rounded-lg text-xs text-amber-300 space-y-1">
+                <p className="font-bold">Active Configuration Requirements:</p>
+                <ul className="list-disc list-inside space-y-0.5 text-[11px]">
+                  {deploymentPlan.readinessSummary.unresolvedBlockers.map((b, idx) => (
+                    <li key={idx}>{b}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
           </div>
 
           {/* Step 2: Role Delegation & Connection Form */}

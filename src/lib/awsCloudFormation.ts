@@ -141,7 +141,42 @@ Resources:
               - 'ecs:DescribeTasks'
               - 'ecs:StopTask'
             Resource: '*'
+${
+  options.enableGpuBatch
+    ? `
+  # Optional customer ECR repository for containerized GPU worker image
+  NovaVidGpuWorkerEcrRepo:
+    Type: 'AWS::ECR::Repository'
+    Properties:
+      RepositoryName: !Sub 'novavid-gpu-worker-\${TenantIdentifier}'
+      ImageScanningConfiguration:
+        ScanOnPush: true
+      ImageTagMutability: IMMUTABLE
 
+  # Batch Job Definition for headless GPU video composition
+  NovaVidGpuJobDefinition:
+    Type: 'AWS::Batch::JobDefinition'
+    Properties:
+      JobDefinitionName: !Sub 'novavid-render-gpu-\${TenantIdentifier}'
+      Type: container
+      ContainerProperties:
+        Image: !Sub '\${AWS::AccountId}.dkr.ecr.\${AWS::Region}.amazonaws.com/novavid-gpu-worker-\${TenantIdentifier}:latest'
+        Vcpus: 4
+        Memory: 16384
+        ResourceRequirements:
+          - Type: GPU
+            Value: '1'
+        Command: ['python', '/app/cloud/gpu_server.py']
+        Environment:
+          - Name: S3_BUCKET_NAME
+            Value: !Ref NovaVidCustomerMediaBucket
+          - Name: AWS_DEFAULT_REGION
+            Value: !Ref 'AWS::Region'
+      Timeout:
+        AttemptDurationSeconds: 600
+`
+    : ""
+}
 Outputs:
   RoleArn:
     Description: 'Cross-account IAM Role ARN to paste into NovaVid AI Studio'
@@ -158,7 +193,23 @@ Outputs:
   Region:
     Description: 'AWS Region of deployment'
     Value: !Ref 'AWS::Region'
-`;
+${
+  options.enableGpuBatch
+    ? `
+  EcrRepoUri:
+    Description: 'ECR Repository URI for NovaVid GPU Worker container image'
+    Value: !GetAtt NovaVidGpuWorkerEcrRepo.RepositoryUri
+    Export:
+      Name: !Sub '\${AWS::StackName}-EcrRepoUri'
+
+  JobDefinitionArn:
+    Description: 'AWS Batch GPU Job Definition ARN'
+    Value: !Ref NovaVidGpuJobDefinition
+    Export:
+      Name: !Sub '\${AWS::StackName}-JobDefArn'
+`
+    : ""
+}`;
 }
 
 /**
@@ -347,6 +398,49 @@ export function generateCloudFormationJson(options: CloudFormationOptions): stri
       },
     },
   };
+
+  if (options.enableGpuBatch) {
+    (doc.Resources as Record<string, unknown>).NovaVidGpuWorkerEcrRepo = {
+      Type: "AWS::ECR::Repository",
+      Properties: {
+        RepositoryName: { "Fn::Sub": "novavid-gpu-worker-${TenantIdentifier}" },
+        ImageScanningConfiguration: { ScanOnPush: true },
+        ImageTagMutability: "IMMUTABLE",
+      },
+    };
+
+    (doc.Resources as Record<string, unknown>).NovaVidGpuJobDefinition = {
+      Type: "AWS::Batch::JobDefinition",
+      Properties: {
+        JobDefinitionName: { "Fn::Sub": "novavid-render-gpu-${TenantIdentifier}" },
+        Type: "container",
+        ContainerProperties: {
+          Image: {
+            "Fn::Sub": "${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/novavid-gpu-worker-${TenantIdentifier}:latest",
+          },
+          Vcpus: 4,
+          Memory: 16384,
+          ResourceRequirements: [{ Type: "GPU", Value: "1" }],
+          Command: ["python", "/app/cloud/gpu_server.py"],
+          Environment: [
+            { Name: "S3_BUCKET_NAME", Value: { Ref: "NovaVidCustomerMediaBucket" } },
+            { Name: "AWS_DEFAULT_REGION", Value: { Ref: "AWS::Region" } },
+          ],
+        },
+        Timeout: { AttemptDurationSeconds: 600 },
+      },
+    };
+
+    (doc.Outputs as Record<string, unknown>).EcrRepoUri = {
+      Description: "ECR Repository URI for NovaVid GPU Worker container image",
+      Value: { "Fn::GetAtt": ["NovaVidGpuWorkerEcrRepo", "RepositoryUri"] },
+    };
+
+    (doc.Outputs as Record<string, unknown>).JobDefinitionArn = {
+      Description: "AWS Batch GPU Job Definition ARN",
+      Value: { Ref: "NovaVidGpuJobDefinition" },
+    };
+  }
 
   return JSON.stringify(doc, null, 2);
 }
