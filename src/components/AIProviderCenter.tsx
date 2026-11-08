@@ -8,9 +8,10 @@ import { ClaudeScriptEngine } from "../lib/claudeEngine";
 
 interface AIProviderCenterProps {
   currentUserId?: string;
+  onBackToSettings?: () => void;
 }
 
-export const AIProviderCenter: React.FC<AIProviderCenterProps> = () => {
+export const AIProviderCenter: React.FC<AIProviderCenterProps> = ({ onBackToSettings }) => {
   const [models, setModels] = useState<OmniRouteDiscoveredModel[]>([]);
   const [selectedModelId, setSelectedModelId] = useState<string>("anthropic/claude-3-5-sonnet-20241022");
   const [freeTierOnly, setFreeTierOnly] = useState<boolean>(false);
@@ -90,6 +91,15 @@ export const AIProviderCenter: React.FC<AIProviderCenterProps> = () => {
         </div>
 
         <div className="flex items-center space-x-4">
+          {onBackToSettings && (
+            <button
+              type="button"
+              onClick={onBackToSettings}
+              className="px-3 py-1.5 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-lg text-xs font-semibold transition-colors"
+            >
+              ← Back to Settings
+            </button>
+          )}
           <div className="text-right">
             <p className="text-xs text-gray-400">Tokens Ingested</p>
             <p className="text-base font-bold text-white font-mono">{tokensConsumed.toLocaleString()}</p>

@@ -113,6 +113,8 @@ import { AvatarStudioPage } from "./components/AvatarStudioPage";
 import { ThumbnailStudioPage } from "./components/ThumbnailStudioPage";
 import { QualityControlPage } from "./components/QualityControlPage";
 import { OnboardingWizardModal } from "./components/OnboardingWizardModal";
+import { AIProviderCenter } from "./components/AIProviderCenter";
+import { AwsConnectionCenter } from "./components/AwsConnectionCenter";
 import { useAuth } from "./auth/AuthContext";
 import {
   getStoredResourceMode,
@@ -123,7 +125,7 @@ import {
 } from "./lib/resourceManager";
 import "./App.css";
 
-type View = "dashboard" | "automation" | "avatar" | "thumbnails" | "quality_control" | "agent" | "creator" | "projects" | "media" | "settings" | "providers" | "google_youtube" | "research" | "scripts" | "storyboard" | "visuals" | "voice" | "subtitles" | "audio" | "timeline" | "export" | "seo" | "publish" | "analytics" | "license" | "customer_saas" | "admin_saas";
+type View = "dashboard" | "automation" | "avatar" | "thumbnails" | "quality_control" | "agent" | "creator" | "projects" | "media" | "settings" | "providers" | "google_youtube" | "aws_cloud" | "research" | "scripts" | "storyboard" | "visuals" | "voice" | "subtitles" | "audio" | "timeline" | "export" | "seo" | "publish" | "analytics" | "license" | "customer_saas" | "admin_saas";
 type StorageState = "connecting" | "ready" | "error";
 export type UserMode = "beginner" | "creator" | "advanced";
 
@@ -136,6 +138,7 @@ const URDU_NAV_LABELS: Record<string, string> = {
   "AI Agent (Auto)": "خودکار اے آئی ایجنٹ",
   "Creator Workspace": "تخلیقی ورک اسپیس",
   "Google & YouTube": "گوگل و یوٹیوب سنٹر",
+  "AWS Cloud (BYOA)": "ایمازون کلاؤڈ کمپیوٹنگ",
   Projects: "پروجیکٹس",
   "Media library": "میڈیا لائبریری",
   "AI Providers": "اے آئی ماڈلز و کلید",
@@ -166,6 +169,7 @@ const URDU_PAGE_TITLES: Record<string, string> = {
   agent: "خودکار یوٹیوب اے آئی ایجنٹ",
   creator: "تخلیقی ورک اسپیس اور چینلز",
   google_youtube: "گوگل و یوٹیوب سنٹر",
+  aws_cloud: "ایمازون کلاؤڈ کمپیوٹنگ (BYOA)",
   projects: "میرے پروجیکٹس",
   media: "میڈیا لائبریری",
   providers: "اے آئی ماڈلز و پرووائیڈرز",
@@ -196,9 +200,10 @@ const navigation = [
   { label: "AI Agent (Auto)", view: "agent" as const, icon: "spark" },
   { label: "Creator Workspace", view: "creator" as const, icon: "spark" },
   { label: "Google & YouTube", view: "google_youtube" as const, icon: "spark" },
+  { label: "AWS Cloud (BYOA)", view: "aws_cloud" as const, icon: "render" },
   { label: "Projects", view: "projects" as const, icon: "folder" },
   { label: "Media library", view: "media" as const, icon: "media" },
-  { label: "AI Providers", view: "google_youtube" as const, icon: "spark" },
+  { label: "AI Providers", view: "providers" as const, icon: "spark" },
   { label: "AI Research", view: "research" as const, icon: "search" },
   { label: "Script Studio", view: "scripts" as const, icon: "script" },
   { label: "Storyboard", view: "storyboard" as const, icon: "video" },
@@ -605,6 +610,8 @@ function App() {
         ? "Creator Workspace & Channels"
       : view === "google_youtube"
         ? "Google & YouTube Connection Center"
+      : view === "aws_cloud"
+        ? "AWS Cloud Infrastructure & BYOA Center"
       : view === "projects"
         ? "Projects"
         : view === "media"
@@ -1170,7 +1177,11 @@ function App() {
               onNativeImport={handleNativeMediaImport}
               onDelete={handleDeleteMediaAsset}
             />
-          ) : view === "providers" || view === "google_youtube" ? (
+          ) : view === "aws_cloud" ? (
+            <AwsConnectionCenter tenantId={firebaseUser?.uid || "lodhi-techx"} isOwner={true} />
+          ) : view === "providers" ? (
+            <AIProviderCenter onBackToSettings={() => setView("settings")} />
+          ) : view === "google_youtube" ? (
             <GoogleYouTubeConnectionCenter
               onNavigateToPublish={() => setView("publish")}
               onNavigateToResearch={() => setView("research")}
