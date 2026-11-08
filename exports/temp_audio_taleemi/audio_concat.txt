@@ -1,0 +1,5 @@
+file 'G:/Nova Vid/exports/temp_audio_taleemi/taleemi_scene_1_padded.wav'
+file 'G:/Nova Vid/exports/temp_audio_taleemi/taleemi_scene_2_padded.wav'
+file 'G:/Nova Vid/exports/temp_audio_taleemi/taleemi_scene_3_padded.wav'
+file 'G:/Nova Vid/exports/temp_audio_taleemi/taleemi_scene_4_padded.wav'
+file 'G:/Nova Vid/exports/temp_audio_taleemi/taleemi_scene_5_padded.wav'

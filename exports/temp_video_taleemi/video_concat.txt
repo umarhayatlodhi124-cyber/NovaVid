@@ -1,0 +1,5 @@
+file 'G:/Nova Vid/exports/temp_video_taleemi/taleemi_scene_1_visual.mp4'
+file 'G:/Nova Vid/exports/temp_video_taleemi/taleemi_scene_2_visual.mp4'
+file 'G:/Nova Vid/exports/temp_video_taleemi/taleemi_scene_3_visual.mp4'
+file 'G:/Nova Vid/exports/temp_video_taleemi/taleemi_scene_4_visual.mp4'
+file 'G:/Nova Vid/exports/temp_video_taleemi/taleemi_scene_5_visual.mp4'

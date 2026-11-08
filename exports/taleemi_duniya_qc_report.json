@@ -1,0 +1,20 @@
+{
+  "projectId": "taleemi_duniya_pro_launch_01",
+  "videoFilePath": "G:\\Nova Vid\\exports\\Taleemi_Duniya_Pro_Avatar_Tutorial.mp4",
+  "videoDuration": 65.904036,
+  "width": 1920,
+  "height": 1080,
+  "fps": 60.0,
+  "videoCodec": "h264",
+  "audioCodec": "aac",
+  "audioSampleRate": 44100,
+  "audioBitrateKbps": 192,
+  "thumbnailFilePath": "G:\\Nova Vid\\exports\\Taleemi_Duniya_Pro_Avatar_Thumbnail.png",
+  "thumbnailWidth": 1280,
+  "thumbnailHeight": 720,
+  "thumbnailSizeKb": 106.55,
+  "subtitlesCount": 5,
+  "overallStatus": "PASS",
+  "canPublish": true,
+  "evaluatedAt": "2026-11-08T11:40:00Z"
+}

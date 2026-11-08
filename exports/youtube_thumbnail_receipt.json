@@ -1,0 +1,41 @@
+{
+  "videoId": "BnE6_ZbM4Bc",
+  "status": "published",
+  "uploadedAt": "Sun, 08 Nov 2026 06:34:50 GMT",
+  "thumbnailFilePath": "G:\\Nova Vid\\exports\\LODHI_TECHX_AI_Intro_1280x720_Thumbnail.png",
+  "thumbnailDimensions": "1280x720",
+  "fileSizeBytes": 77817,
+  "youtubeResponse": {
+    "kind": "youtube#thumbnailSetResponse",
+    "etag": "VAdeDzLXBQqsIRuQrbCSHlRwOZ8",
+    "items": [
+      {
+        "default": {
+          "url": "https://i9.ytimg.com/vi/BnE6_ZbM4Bc/default.jpg?sqp=COitwNcG&rs=AOn4CLBf6HQMJZYZ6x7dD2gZ_pqVCrxXFA",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i9.ytimg.com/vi/BnE6_ZbM4Bc/mqdefault.jpg?sqp=COitwNcG&rs=AOn4CLC1Yd0YbWE_HvnGK29BUi7lKWWSgg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i9.ytimg.com/vi/BnE6_ZbM4Bc/hqdefault.jpg?sqp=COitwNcG&rs=AOn4CLDKA2M2uVi7vqnEV0wNEpBt-kGfXw",
+          "width": 480,
+          "height": 360
+        },
+        "standard": {
+          "url": "https://i9.ytimg.com/vi/BnE6_ZbM4Bc/sddefault.jpg?sqp=COitwNcG&rs=AOn4CLDMjRHckR__Dz4qIkrfH3v9x7JI7A",
+          "width": 640,
+          "height": 480
+        },
+        "maxres": {
+          "url": "https://i9.ytimg.com/vi/BnE6_ZbM4Bc/maxresdefault.jpg?sqp=COitwNcG&rs=AOn4CLAXW7FufZSng1l1qzVna714Pk_txQ",
+          "width": 1280,
+          "height": 720
+        }
+      }
+    ]
+  }
+}

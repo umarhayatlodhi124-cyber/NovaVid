@@ -109,6 +109,10 @@ import { BetaFeedbackModal } from "./components/BetaFeedbackModal";
 import { OneClickVideoCreator } from "./components/OneClickVideoCreator";
 import { CloudAuthModal } from "./components/CloudAuthModal";
 import { MultiNicheAutomationPanel } from "./components/MultiNicheAutomationPanel";
+import { AvatarStudioPage } from "./components/AvatarStudioPage";
+import { ThumbnailStudioPage } from "./components/ThumbnailStudioPage";
+import { QualityControlPage } from "./components/QualityControlPage";
+import { OnboardingWizardModal } from "./components/OnboardingWizardModal";
 import { useAuth } from "./auth/AuthContext";
 import {
   getStoredResourceMode,
@@ -119,13 +123,16 @@ import {
 } from "./lib/resourceManager";
 import "./App.css";
 
-type View = "dashboard" | "automation" | "agent" | "creator" | "projects" | "media" | "settings" | "providers" | "google_youtube" | "research" | "scripts" | "storyboard" | "visuals" | "voice" | "subtitles" | "audio" | "timeline" | "export" | "seo" | "publish" | "analytics" | "license" | "customer_saas" | "admin_saas";
+type View = "dashboard" | "automation" | "avatar" | "thumbnails" | "quality_control" | "agent" | "creator" | "projects" | "media" | "settings" | "providers" | "google_youtube" | "research" | "scripts" | "storyboard" | "visuals" | "voice" | "subtitles" | "audio" | "timeline" | "export" | "seo" | "publish" | "analytics" | "license" | "customer_saas" | "admin_saas";
 type StorageState = "connecting" | "ready" | "error";
 export type UserMode = "beginner" | "creator" | "advanced";
 
 const URDU_NAV_LABELS: Record<string, string> = {
   Overview: "ڈیش بورڈ / جائزہ",
   "Daily Automation": "خودکار روزانہ مواد",
+  "AI Face Presenter": "اے آئی فیس پریزنٹر و اوتار",
+  "Thumbnail Studio": "تھمب نیل اسٹوڈیو",
+  "Quality Control (QC)": "کوالٹی کنٹرول و معائنہ",
   "AI Agent (Auto)": "خودکار اے آئی ایجنٹ",
   "Creator Workspace": "تخلیقی ورک اسپیس",
   "Google & YouTube": "گوگل و یوٹیوب سنٹر",
@@ -153,6 +160,9 @@ const URDU_NAV_LABELS: Record<string, string> = {
 const URDU_PAGE_TITLES: Record<string, string> = {
   dashboard: "ڈیش بورڈ اور جائزہ",
   automation: "خودکار روزانہ ملٹی نیش مواد",
+  avatar: "اے آئی فیس پریزنٹر اور اوتار اسٹوڈیو",
+  thumbnails: "خودکار 1280x720 تھمب نیل اسٹوڈیو",
+  quality_control: "کوالٹی کنٹرول و پری فلائٹ آڈٹ",
   agent: "خودکار یوٹیوب اے آئی ایجنٹ",
   creator: "تخلیقی ورک اسپیس اور چینلز",
   google_youtube: "گوگل و یوٹیوب سنٹر",
@@ -180,6 +190,9 @@ const URDU_PAGE_TITLES: Record<string, string> = {
 const navigation = [
   { label: "Overview", view: "dashboard" as const, icon: "grid" },
   { label: "Daily Automation", view: "automation" as const, icon: "spark" },
+  { label: "AI Face Presenter", view: "avatar" as const, icon: "video" },
+  { label: "Thumbnail Studio", view: "thumbnails" as const, icon: "image" },
+  { label: "Quality Control (QC)", view: "quality_control" as const, icon: "shield" },
   { label: "AI Agent (Auto)", view: "agent" as const, icon: "spark" },
   { label: "Creator Workspace", view: "creator" as const, icon: "spark" },
   { label: "Google & YouTube", view: "google_youtube" as const, icon: "spark" },
@@ -214,6 +227,7 @@ function App() {
   const [projects, setProjects] = useState<Project[]>([]);
   const { user: firebaseUser } = useAuth();
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [isOnboardingOpen, setIsOnboardingOpen] = useState(false);
   const [storageState, setStorageState] = useState<StorageState>("connecting");
   const [storageIssue, setStorageIssue] = useState<string | null>(null);
   const [modalProject, setModalProject] = useState<Project | null | undefined>();
@@ -579,6 +593,12 @@ function App() {
       ? "Overview"
       : view === "automation"
         ? "Multi-Tenant Multi-Niche Daily Automation"
+      : view === "avatar"
+        ? "AI Face Presenter & Avatar Studio"
+      : view === "thumbnails"
+        ? "Automated 1280x720 Thumbnail Studio"
+      : view === "quality_control"
+        ? "Quality Control & Preflight Inspector"
       : view === "agent"
         ? "Autonomous YouTube AI Agent"
       : view === "creator"
@@ -929,7 +949,28 @@ function App() {
               }}
               title="Report Feedback or Performance Diagnostics"
             >
-              <span>ðŸ’¬</span> <span style={{ opacity: 0.9 }}>Beta Feedback</span>
+              <span>Beta Feedback</span>
+            </button>
+            <button
+              type="button"
+              className="topbar-action-button"
+              onClick={() => setIsOnboardingOpen(true)}
+              style={{
+                backgroundColor: "rgba(16, 185, 129, 0.15)",
+                color: "#34d399",
+                border: "1px solid rgba(16, 185, 129, 0.4)",
+                borderRadius: "6px",
+                padding: "5px 10px",
+                fontSize: "0.8rem",
+                fontWeight: 600,
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                gap: "5px",
+              }}
+              title="Channel & Automation Onboarding Wizard"
+            >
+              <span style={{ opacity: 0.9 }}>Onboarding Wizard</span>
             </button>
             {!isTauriEnvironment() && !firebaseUser && (
               <button
@@ -1095,6 +1136,12 @@ function App() {
             />
           ) : view === "automation" ? (
             <MultiNicheAutomationPanel isUrdu={uiLanguage === "ur"} />
+          ) : view === "avatar" ? (
+            <AvatarStudioPage currentUserId={firebaseUser?.uid || "owner_lodhi_techx"} isOwner={true} />
+          ) : view === "thumbnails" ? (
+            <ThumbnailStudioPage currentUserId={firebaseUser?.uid || "owner_lodhi_techx"} />
+          ) : view === "quality_control" ? (
+            <QualityControlPage projectId={selectedProjectId || "taleemi_duniya_pro_01"} />
           ) : view === "agent" ? (
             <AgentStudioPage
               currentProjectId={selectedProjectId || projects[0]?.id || null}
@@ -1406,6 +1453,14 @@ Please structure the script with the following sections:
         currentUser={firebaseUser}
         onAuthSuccess={() => {
           refreshProjects().catch(() => undefined);
+        }}
+      />
+
+      <OnboardingWizardModal
+        isOpen={isOnboardingOpen}
+        onClose={() => setIsOnboardingOpen(false)}
+        onComplete={(cfg) => {
+          setQuickToast(`Onboarding active: ${cfg.dailyShorts} Shorts + ${cfg.dailyLong} Long in ${cfg.subNiche}`);
         }}
       />
 
