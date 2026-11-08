@@ -38,23 +38,24 @@ export const AwsConnectionCenter: React.FC<AwsConnectionCenterProps> = ({
       externalId: generateTenantExternalId(tenantId),
       region: "us-east-1",
       bucketName: `novavid-${tenantId.toLowerCase().replace(/[^a-z0-9-]/g, "-")}-media-us-east-1`,
-      status: isOwner ? "connected" : "unconnected",
+      status: "unconnected",
       gpuQuota: {
         instanceFamily: "G4dn",
         quotaCode: "L-384A81E9",
-        quotaValue: 8,
-        sufficient: true,
-        message: "Sufficient GPU quota verified: 8 vCPUs (supports g4dn.xlarge / g4dn.2xlarge).",
+        quotaValue: 0,
+        sufficient: false,
+        message: "GPU quota unverified. Default for new AWS accounts is 0 vCPUs (minimum 4 vCPUs required).",
       },
-      connectedAt: isOwner ? new Date().toISOString() : undefined,
-      lastTestedAt: isOwner ? new Date().toISOString() : undefined,
-      estimatedMonthlySpendUsd: 14.85,
+      connectedAt: undefined,
+      lastTestedAt: undefined,
+      estimatedMonthlySpendUsd: 0,
     };
   });
 
   const [accountIdInput, setAccountIdInput] = useState(connection.accountId);
   const [roleArnInput, setRoleArnInput] = useState(connection.roleArn);
   const [regionInput, setRegionInput] = useState(connection.region);
+  const [gpuQuotaInput, setGpuQuotaInput] = useState<number>(connection.gpuQuota.quotaValue || 0);
   const [templateFormat, setTemplateFormat] = useState<"yaml" | "json">("yaml");
   const [copiedTemplate, setCopiedTemplate] = useState(false);
   const [copiedExtId, setCopiedExtId] = useState(false);
@@ -168,11 +169,11 @@ export const AwsConnectionCenter: React.FC<AwsConnectionCenterProps> = ({
       return;
     }
 
-    const quotaResult = await checkAwsGpuQuota(testConn, 8);
+    const quotaResult = await checkAwsGpuQuota(testConn, gpuQuotaInput);
 
     setConnection({
       ...testConn,
-      status: quotaResult.sufficient ? "connected" : "quota_exceeded",
+      status: stsResult.success ? (quotaResult.sufficient ? "connected" : "quota_exceeded") : "invalid_credentials",
       gpuQuota: quotaResult,
       connectedAt: connection.connectedAt || new Date().toISOString(),
       lastTestedAt: new Date().toISOString(),
@@ -565,6 +566,20 @@ export const AwsConnectionCenter: React.FC<AwsConnectionCenterProps> = ({
                 <span className="font-mono text-emerald-400 font-bold">
                   {connection.gpuQuota.quotaValue} vCPUs
                 </span>
+              </div>
+              <div className="flex justify-between items-center text-xs pt-1 border-t border-gray-800">
+                <span className="text-gray-400">Granted Limit (vCPUs):</span>
+                <input
+                  type="number"
+                  min={0}
+                  max={64}
+                  value={gpuQuotaInput}
+                  onChange={(e) => {
+                    const val = Math.max(0, parseInt(e.target.value) || 0);
+                    setGpuQuotaInput(val);
+                  }}
+                  className="w-16 bg-gray-900 border border-gray-700 rounded px-2 py-0.5 text-right font-mono text-xs text-white focus:outline-none focus:border-amber-500"
+                />
               </div>
               <p className="text-[11px] text-gray-400 mt-2 border-t border-gray-800 pt-2">
                 {connection.gpuQuota.message}

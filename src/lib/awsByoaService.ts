@@ -168,21 +168,22 @@ export async function verifyAwsCrossAccountAccess(
 
 /**
  * Checks GPU Service Quotas for customer AWS account (e.g. L-384A81E9 for G4dn / G5).
+ * Does not simulate success; defaults to 0 vCPUs until quota is verified from AWS.
  */
 export async function checkAwsGpuQuota(
   _connection: AwsAccountConnection,
-  simulateQuota: number = 8
+  actualQuotaValue: number = 0
 ): Promise<AwsGpuQuotaStatus> {
-  const isSufficient = simulateQuota >= 4;
+  const isSufficient = actualQuotaValue >= 4;
 
   return {
     instanceFamily: "G4dn",
     quotaCode: "L-384A81E9",
-    quotaValue: simulateQuota,
+    quotaValue: actualQuotaValue,
     sufficient: isSufficient,
     message: isSufficient
-      ? `Sufficient GPU quota verified: ${simulateQuota} vCPUs (supports g4dn.xlarge / g4dn.2xlarge).`
-      : `Insufficient GPU quota: ${simulateQuota} vCPUs. Request AWS quota increase for 'Running On-Demand G and VT instances'.`,
+      ? `Sufficient GPU quota verified: ${actualQuotaValue} vCPUs (supports g4dn.xlarge / g4dn.2xlarge).`
+      : `Insufficient GPU quota: ${actualQuotaValue} vCPUs. Request AWS quota increase for 'Running On-Demand G and VT instances'.`,
   };
 }
 

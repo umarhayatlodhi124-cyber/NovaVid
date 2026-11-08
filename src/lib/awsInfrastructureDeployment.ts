@@ -80,6 +80,8 @@ export function buildAwsDeploymentPlan(options: {
   awsRegion?: string;
   gpuQuotaAvailable?: number;
   hasRoleConfigured?: boolean;
+  subnets?: string[];
+  securityGroupIds?: string[];
 }): AwsDeploymentPlan {
   const region = options.awsRegion || "us-east-1";
   const cleanTenant = options.tenantId.toLowerCase().replace(/[^a-z0-9-]/g, "-").slice(0, 16);
@@ -106,8 +108,8 @@ export function buildAwsDeploymentPlan(options: {
       maxvCpus: 16,
       desiredvCpus: 0,
       instanceTypes: ["g4dn.xlarge", "g5.xlarge"],
-      subnets: ["subnet-placeholder-1", "subnet-placeholder-2"],
-      securityGroupIds: ["sg-placeholder"],
+      subnets: options.subnets || [],
+      securityGroupIds: options.securityGroupIds || [],
     },
     serviceRole: `arn:aws:iam::${accountId}:role/aws-service-role/batch.amazonaws.com/AWSServiceRoleForBatch`,
   };
