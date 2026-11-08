@@ -1,7 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 
 export type ProviderName = "gemini" | "claude";
-export type ProviderStatus = "connected" | "error" | "disconnected";
+export type ProviderStatus = "connected" | "disconnected" | "invalid_key" | "quota_exceeded" | "error";
 
 export interface ProviderUsage {
   requests: number;
@@ -97,6 +97,30 @@ export interface ProviderConnectionResult {
   errorCategory?: string;
 }
 
+export function classifyProviderErrorStatus(message: string): ProviderStatus {
+  const lower = message.toLowerCase();
+  if (
+    lower.includes("401") ||
+    lower.includes("403") ||
+    lower.includes("invalid") ||
+    lower.includes("unauthorized") ||
+    lower.includes("forbidden") ||
+    lower.includes("api key")
+  ) {
+    return "invalid_key";
+  }
+  if (
+    lower.includes("429") ||
+    lower.includes("quota") ||
+    lower.includes("rate limit") ||
+    lower.includes("resource_exhausted") ||
+    lower.includes("credit")
+  ) {
+    return "quota_exceeded";
+  }
+  return "error";
+}
+
 export class GeminiProviderAdapter {
   config: ProviderConfig;
 
@@ -110,7 +134,7 @@ export class GeminiProviderAdapter {
       return { connected: false, status: "error", message: "Confirm the potentially billable Gemini connection test before continuing.", fallbackOccurred: false };
     }
     if (!config.credentialConfigured) {
-      return { connected: false, status: "error", message: "Save a Gemini credential in Windows Credential Manager before testing.", fallbackOccurred: false };
+      return { connected: false, status: "disconnected", message: "Save a Gemini credential in Windows Credential Manager before testing.", fallbackOccurred: false };
     }
     try {
       const result = await invoke<ProviderConnectionResult>("gemini_test_connection", {
@@ -118,12 +142,14 @@ export class GeminiProviderAdapter {
         requestId: crypto.randomUUID(),
         billingConfirmed,
       });
-      this.config = { ...config, status: result.connected ? "connected" : "error", lastError: result.connected ? null : result.message };
-      return { ...result, status: result.connected ? "connected" : "error" };
+      const st = result.connected ? "connected" : classifyProviderErrorStatus(result.message);
+      this.config = { ...config, status: st, lastError: result.connected ? null : result.message };
+      return { ...result, status: st };
     } catch (error) {
       const message = safeNativeError(error);
-      this.config = { ...config, status: "error", lastError: message };
-      return { connected: false, status: "error", message, fallbackOccurred: false };
+      const st = classifyProviderErrorStatus(message);
+      this.config = { ...config, status: st, lastError: message };
+      return { connected: false, status: st, message, fallbackOccurred: false };
     }
   }
 
@@ -232,6 +258,85 @@ export class GeminiProviderAdapter {
 
   cancelGeneration(requestId: string): Promise<boolean> {
     return invoke<boolean>("gemini_cancel_generation", { requestId });
+  }
+}
+
+export class ClaudeProviderAdapter {
+  config: ProviderConfig;
+
+  constructor(config: Partial<ProviderConfig> = {}) {
+    this.config = validateProviderConfig({
+      ...config,
+      provider: "claude",
+      model: config.model || "claude-3-5-sonnet-20241022",
+    });
+  }
+
+  async testConnection(billingConfirmed = false): Promise<ProviderConnectionResult & { status: ProviderStatus }> {
+    const config = validateProviderConfig(this.config);
+    if (!billingConfirmed) {
+      return { connected: false, status: "error", message: "Confirm the potentially billable Claude connection test before continuing.", fallbackOccurred: false };
+    }
+    if (!config.credentialConfigured) {
+      return { connected: false, status: "disconnected", message: "Save a Claude API key in Windows Credential Manager before testing.", fallbackOccurred: false };
+    }
+    try {
+      const result = await invoke<ProviderConnectionResult>("provider_test_connection", {
+        provider: "claude",
+        model: config.model,
+        requestId: crypto.randomUUID(),
+        billingConfirmed,
+      });
+      const st = result.connected ? "connected" : classifyProviderErrorStatus(result.message);
+      this.config = { ...config, status: st, lastError: result.connected ? null : result.message };
+      return { ...result, status: st };
+    } catch (error) {
+      const message = safeNativeError(error);
+      const st = classifyProviderErrorStatus(message);
+      this.config = { ...config, status: st, lastError: message };
+      return { connected: false, status: st, message, fallbackOccurred: false };
+    }
+  }
+
+  async generateText(prompt: string, requestId: string = crypto.randomUUID(), billingConfirmed = false): Promise<string> {
+    const config = validateProviderConfig(this.config);
+    if (!billingConfirmed) {
+      throw new Error("Confirm the potentially billable Claude generation before continuing.");
+    }
+    if (!config.enabled || !config.credentialConfigured) {
+      throw new Error("Enable Claude and configure its Windows Credential Manager credential before generating content.");
+    }
+    const normalizedPrompt = prompt.trim();
+    if (!normalizedPrompt || normalizedPrompt.length > 100_000) {
+      throw new Error("The prompt is empty or exceeds the supported size.");
+    }
+
+    try {
+      const text = await invoke<string>("gemini_generate_text", {
+        request: {
+          provider: "claude",
+          model: config.model,
+          prompt: normalizedPrompt,
+          temperature: 0.7,
+          maxOutputTokens: 1_024,
+          requestId,
+          billingConfirmed,
+        },
+      });
+      if (!text || !text.trim()) throw new Error("Claude returned no usable text.");
+      this.config = {
+        ...config,
+        status: "connected",
+        lastError: null,
+        usage: { ...config.usage, requests: config.usage.requests + 1, lastUsed: new Date().toISOString() },
+      };
+      return text.trim();
+    } catch (error) {
+      const message = safeNativeError(error);
+      const st = classifyProviderErrorStatus(message);
+      this.config = { ...config, status: st, lastError: message };
+      throw new Error(message);
+    }
   }
 }
 

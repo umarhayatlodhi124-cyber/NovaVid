@@ -183,11 +183,25 @@ export async function duplicateProject(sourceId: string, newName?: string): Prom
       }).catch(() => null);
     }
     if (timeline) {
-      await TimelineRepository.saveTimeline(
-        duplicated.id,
-        timeline.tracks || [],
-        timeline.clips || []
-      ).catch(() => null);
+      const trackIdMap = new Map<string, string>();
+      const clonedTracks = (timeline.tracks || []).map((t) => {
+        const newTrackId = safeUUID();
+        trackIdMap.set(t.id, newTrackId);
+        return {
+          ...t,
+          id: newTrackId,
+          projectId: duplicated.id,
+        };
+      });
+
+      const clonedClips = (timeline.clips || []).map((c) => ({
+        ...c,
+        id: safeUUID(),
+        projectId: duplicated.id,
+        trackId: trackIdMap.get(c.trackId) || c.trackId,
+      }));
+
+      await TimelineRepository.saveTimeline(duplicated.id, clonedTracks, clonedClips);
     }
     if (seo) {
       await SEORepository.saveMetadata({
@@ -269,11 +283,25 @@ export async function importProjectArchive(archive: ProjectArchive): Promise<Pro
   }
   if (archive.timeline) {
     const tl = archive.timeline as any;
-    await TimelineRepository.saveTimeline(
-      newProject.id,
-      tl.tracks || [],
-      tl.clips || []
-    ).catch(() => null);
+    const trackIdMap = new Map<string, string>();
+    const importedTracks = (tl.tracks || []).map((t: any) => {
+      const newTrackId = safeUUID();
+      trackIdMap.set(t.id, newTrackId);
+      return {
+        ...t,
+        id: newTrackId,
+        projectId: newProject.id,
+      };
+    });
+
+    const importedClips = (tl.clips || []).map((c: any) => ({
+      ...c,
+      id: safeUUID(),
+      projectId: newProject.id,
+      trackId: trackIdMap.get(c.trackId) || c.trackId,
+    }));
+
+    await TimelineRepository.saveTimeline(newProject.id, importedTracks, importedClips).catch(() => null);
   }
   if (archive.seo) {
     await SEORepository.saveMetadata({

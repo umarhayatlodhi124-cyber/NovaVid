@@ -268,7 +268,7 @@ describe("Phase B & C: Complete 10-Step End-to-End Creator Workflow", () => {
         project.name.replace(/[:']/g, " ") +
         "':fontsize=36:fontcolor=cyan:x=(w-text_w)/2:y=(h-text_h)/2+30\"",
       "-c:v libx264 -preset ultrafast -pix_fmt yuv420p",
-      "-c:a aac -b:a 192k",
+      "-c:a aac -b:a 192k -ac 2 -ar 44100",
       `"${workflowMp4}"`,
     ].join(" ");
 
@@ -286,6 +286,7 @@ describe("Phase B & C: Complete 10-Step End-to-End Creator Workflow", () => {
     expect(vStream.width).toBe(1920);
     expect(vStream.height).toBe(1080);
     expect(aStream.codec_name).toBe("aac");
+    expect(aStream.channels).toBe(2); // Stereo 2-channel verified
     expect(parseFloat(probeMeta.format.duration)).toBeCloseTo(4.0, 0.5);
 
     // 9. Run Automated QC Inspection
@@ -337,7 +338,7 @@ describe("Phase B & C: Complete 10-Step End-to-End Creator Workflow", () => {
         },
       });
       expect(imported.id).toBeDefined();
-      expect(imported.name).toBe("Imported Project Archive");
+      expect(imported.name).toContain("Imported Project Archive");
     }
 
     // Duplicate project

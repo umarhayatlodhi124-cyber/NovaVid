@@ -3,11 +3,13 @@ import { invoke } from "@tauri-apps/api/core";
 import {
   DEFAULT_PROVIDER_CONFIG,
   GeminiProviderAdapter,
+  ClaudeProviderAdapter,
   getProviderCredentialStatus,
   restoreProviderConfig,
   saveProviderCredential,
   serializeProviderConfig,
   validateProviderConfig,
+  classifyProviderErrorStatus,
 } from "./providers";
 
 vi.mock("@tauri-apps/api/core", () => ({ invoke: vi.fn() }));
@@ -111,5 +113,32 @@ describe("providers", () => {
     await expect(adapter.generateText("Write script", "req-429", true)).rejects.toThrow(
       /rate\/quota limit reached \(HTTP 429\)/
     );
+  });
+
+  it("accurately classifies error statuses into granular states", () => {
+    expect(classifyProviderErrorStatus("HTTP 401 Unauthorized: Invalid API key")).toBe("invalid_key");
+    expect(classifyProviderErrorStatus("HTTP 403 Forbidden: API key revoked")).toBe("invalid_key");
+    expect(classifyProviderErrorStatus("HTTP 429 Too Many Requests: Rate limit")).toBe("quota_exceeded");
+    expect(classifyProviderErrorStatus("HTTP 500 Internal Server Error")).toBe("error");
+  });
+
+  it("handles Claude provider initialization and connection test states", async () => {
+    const claude = new ClaudeProviderAdapter({
+      model: "claude-3-5-sonnet-20241022",
+      credentialConfigured: false,
+    });
+
+    const unconfResult = await claude.testConnection(true);
+    expect(unconfResult.status).toBe("disconnected");
+
+    const configuredClaude = new ClaudeProviderAdapter({
+      model: "claude-3-5-sonnet-20241022",
+      credentialConfigured: true,
+      enabled: true,
+    });
+
+    vi.mocked(invoke).mockResolvedValueOnce({ connected: true, message: "Claude connected successfully." });
+    const successResult = await configuredClaude.testConnection(true);
+    expect(successResult.status).toBe("connected");
   });
 });

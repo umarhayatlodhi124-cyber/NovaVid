@@ -133,10 +133,24 @@ export const FALLBACK_VOICES: VoiceOption[] = [
   },
 ];
 
-export async function testElevenLabsConnection(apiKey?: string): Promise<{ connected: boolean; message: string }> {
+export interface ElevenLabsConnectionResult {
+  connected: boolean;
+  status: "connected" | "disconnected" | "invalid_key" | "quota_exceeded" | "error";
+  message: string;
+}
+
+export interface ElevenLabsSynthesisResult {
+  audioBlobUrl: string;
+  durationSeconds: number;
+  sizeBytes: number;
+  format: "mp3" | "wav";
+}
+
+export async function testElevenLabsConnection(apiKey?: string): Promise<ElevenLabsConnectionResult> {
   if (!apiKey || !apiKey.trim()) {
     return {
       connected: false,
+      status: "disconnected",
       message: "ElevenLabs API key is not configured. Please save your API key in Settings > API Connections.",
     };
   }
@@ -151,28 +165,96 @@ export async function testElevenLabsConnection(apiKey?: string): Promise<{ conne
     if (res.status === 401 || res.status === 403) {
       return {
         connected: false,
+        status: "invalid_key",
         message: "Invalid ElevenLabs API key. Please check your credentials in the ElevenLabs dashboard.",
+      };
+    }
+
+    if (res.status === 429) {
+      return {
+        connected: false,
+        status: "quota_exceeded",
+        message: "ElevenLabs API rate limit or monthly quota exceeded.",
       };
     }
 
     if (!res.ok) {
       return {
         connected: false,
+        status: "error",
         message: `ElevenLabs returned HTTP ${res.status}.`,
       };
     }
 
     return {
       connected: true,
+      status: "connected",
       message: "Successfully connected to ElevenLabs API.",
     };
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
     return {
       connected: false,
+      status: "error",
       message: `Failed to connect to ElevenLabs: ${msg}`,
     };
   }
+}
+
+export async function synthesizeElevenLabsSpeech(options: {
+  apiKey: string;
+  voiceId?: string;
+  text: string;
+  modelId?: string;
+}): Promise<ElevenLabsSynthesisResult> {
+  const cleanText = options.text.trim();
+  if (!cleanText) throw new Error("Enter narration text for ElevenLabs voice synthesis.");
+  if (!options.apiKey.trim()) throw new Error("ElevenLabs API key is missing. Configure your key in Settings.");
+
+  const modelId = options.modelId || "eleven_multilingual_v2";
+  const voiceId = options.voiceId || "21m00Tcm4TlvDq8ikWAM";
+  const url = `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`;
+
+  const res = await fetch(url, {
+    method: "POST",
+    headers: {
+      "xi-api-key": options.apiKey.trim(),
+      "Content-Type": "application/json",
+      Accept: "audio/mpeg",
+    },
+    body: JSON.stringify({
+      text: cleanText,
+      model_id: modelId,
+      voice_settings: {
+        stability: 0.5,
+        similarity_boost: 0.75,
+      },
+    }),
+  });
+
+  if (!res.ok) {
+    if (res.status === 401 || res.status === 403) {
+      throw new Error("Invalid or unauthorized ElevenLabs API key. Please check your credentials.");
+    }
+    if (res.status === 429) {
+      throw new Error("ElevenLabs quota exceeded or rate limit reached.");
+    }
+    const errText = await res.text();
+    throw new Error(`ElevenLabs returned HTTP ${res.status}: ${errText}`);
+  }
+
+  const arrayBuffer = await res.arrayBuffer();
+  const blob = new Blob([arrayBuffer], { type: "audio/mpeg" });
+  const audioBlobUrl = URL.createObjectURL(blob);
+  const words = cleanText.split(/\s+/).length;
+  const durationSeconds = Math.max(1, Math.round((words / 2.5) * 10) / 10);
+
+  return {
+    audioBlobUrl,
+    durationSeconds,
+    sizeBytes: arrayBuffer.byteLength,
+    format: "mp3",
+  };
 }
 
 export async function fetchAvailableVoices(): Promise<VoiceOption[]> {

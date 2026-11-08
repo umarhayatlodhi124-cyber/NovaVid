@@ -26,10 +26,10 @@ describe("AI Providers Verification (Phase B & C)", () => {
       expect(validated.model).toBe("gemini-1.5-flash");
 
       const adapter = new GeminiProviderAdapter(validated);
-      // Testing connection without saved credential should return error status without crashing
+      // Testing connection without saved credential should return disconnected status without crashing
       const connResult = await adapter.testConnection(true);
       expect(connResult.connected).toBe(false);
-      expect(connResult.status).toBe("error");
+      expect(connResult.status).toBe("disconnected");
       expect(connResult.message).toContain("credential");
 
       // Generating text without credential throws a clear, sanitized error

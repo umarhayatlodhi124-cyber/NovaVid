@@ -42,7 +42,7 @@ describe("Phase B: Real Local FFmpeg Video Rendering & Media Verification", () =
       "-f lavfi -i sine=frequency=440:duration=3.0",
       "-vf \"drawtext=text='NovaVid AI Studio 2.0 (16\\:9)':fontsize=72:fontcolor=white:x=(w-text_w)/2:y=(h-text_h)/2-50,drawtext=text='LODHI TECHX - Full HD Landscape':fontsize=36:fontcolor=yellow:x=(w-text_w)/2:y=(h-text_h)/2+50\"",
       "-c:v libx264 -preset ultrafast -pix_fmt yuv420p",
-      "-c:a aac -b:a 192k",
+      "-c:a aac -b:a 192k -ac 2 -ar 44100",
       `"${targetFile}"`,
     ].join(" ");
 
@@ -65,7 +65,7 @@ describe("Phase B: Real Local FFmpeg Video Rendering & Media Verification", () =
       "-f lavfi -i sine=frequency=520:duration=3.0",
       "-vf \"drawtext=text='NovaVid Shorts (9\\:16)':fontsize=64:fontcolor=white:x=(w-text_w)/2:y=(h-text_h)/2-60,drawtext=text='LODHI TECHX TikTok/Shorts Export':fontsize=32:fontcolor=cyan:x=(w-text_w)/2:y=(h-text_h)/2+40\"",
       "-c:v libx264 -preset ultrafast -pix_fmt yuv420p",
-      "-c:a aac -b:a 192k",
+      "-c:a aac -b:a 192k -ac 2 -ar 44100",
       `"${targetFile}"`,
     ].join(" ");
 
@@ -87,7 +87,7 @@ describe("Phase B: Real Local FFmpeg Video Rendering & Media Verification", () =
       "-f lavfi -i sine=frequency=660:duration=3.0",
       "-vf \"drawtext=text='NovaVid Square (1\\:1)':fontsize=64:fontcolor=white:x=(w-text_w)/2:y=(h-text_h)/2-40,drawtext=text='Instagram / Social Feed Ready':fontsize=32:fontcolor=lightgreen:x=(w-text_w)/2:y=(h-text_h)/2+40\"",
       "-c:v libx264 -preset ultrafast -pix_fmt yuv420p",
-      "-c:a aac -b:a 192k",
+      "-c:a aac -b:a 192k -ac 2 -ar 44100",
       `"${targetFile}"`,
     ].join(" ");
 
@@ -110,7 +110,7 @@ describe("Phase B: Real Local FFmpeg Video Rendering & Media Verification", () =
       "-f lavfi -i sine=frequency=330:duration=4.0",
       "-vf \"drawtext=text='Scene 1\\: Introduction to NovaVid':fontsize=54:fontcolor=white:enable='between(t,0,2)':x=(w-text_w)/2:y=(h-text_h)/2-30,drawtext=text='Scene 2\\: Real Multi-Track Render':fontsize=54:fontcolor=yellow:enable='between(t,2,4)':x=(w-text_w)/2:y=(h-text_h)/2-30,drawtext=text='Subtitle\\: Automated timeline composition passing broadcast specs':fontsize=32:fontcolor=white:x=(w-text_w)/2:y=h-120\"",
       "-c:v libx264 -preset ultrafast -pix_fmt yuv420p",
-      "-c:a aac -b:a 192k",
+      "-c:a aac -b:a 192k -ac 2 -ar 44100",
       `"${targetFile}"`,
     ].join(" ");
 
@@ -144,6 +144,7 @@ describe("Phase B: Real Local FFmpeg Video Rendering & Media Verification", () =
 
       expect(aStream).toBeDefined();
       expect(aStream.codec_name).toBe("aac");
+      expect(aStream.channels).toBe(2); // Stereo 2-channel verified
 
       const dur = parseFloat(metadata.format.duration);
       expect(dur).toBeCloseTo(testItem.expectedDuration, 0.5);

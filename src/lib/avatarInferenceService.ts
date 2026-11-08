@@ -315,7 +315,8 @@ async function dispatchSadTalkerLocal(
 }
 
 /**
- * Built-in NovaVid Neural Viseme Engine (Offline zero-cost phoneme-to-viseme compositing).
+ * Built-in 2D Synthetic Viseme Rig (Offline zero-cost phoneme-to-viseme compositing fallback).
+ * Explicitly labeled as a 2D heuristic fallback rig, never as a neural AI video diffusion model.
  */
 async function dispatchNovaVidNeuralEngine(
   req: AvatarInferenceRequest,
@@ -323,7 +324,7 @@ async function dispatchNovaVidNeuralEngine(
   logs: string[]
 ): Promise<AvatarInferenceResult> {
   const completedAt = new Date().toISOString();
-  logs.push(`[${completedAt}] NovaVid Neural Viseme Engine: Processed Urdu phoneme alignment and ocular reflex.`);
+  logs.push(`[${completedAt}] 2D Synthetic Viseme Rig (Offline Heuristic Fallback): Processed phoneme alignment and 2D facial reflex.`);
   logs.push(`[${completedAt}] Verified presenter portrait: ${req.portraitUrl}`);
 
   return {

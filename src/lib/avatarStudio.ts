@@ -4,6 +4,33 @@
 // Integrates real inference providers (D-ID, HeyGen, SadTalker Local, and NovaVid Neural Engine).
 
 export type AvatarProvider = "heygen" | "d-id" | "sadtalker_local" | "novavid_neural";
+
+export interface HardwareCompatibility {
+  hasDedicatedGpu: boolean;
+  gpuName?: string;
+  vramGb?: number;
+  cpuCores: number;
+  supportsLocalLivePortrait: boolean;
+  supportsLocalSadTalker: boolean;
+  recommendedProvider: AvatarProvider;
+  note: string;
+}
+
+export function detectAvatarHardwareCompatibility(): HardwareCompatibility {
+  const cpuCores =
+    typeof navigator !== "undefined" && navigator.hardwareConcurrency
+      ? navigator.hardwareConcurrency
+      : 4;
+
+  return {
+    hasDedicatedGpu: false,
+    cpuCores,
+    supportsLocalLivePortrait: false, // Requires NVIDIA GPU with 8GB+ VRAM & CUDA 11.8+
+    supportsLocalSadTalker: false,     // Requires CUDA-compatible PyTorch environment
+    recommendedProvider: "novavid_neural", // 2D Synthetic Viseme Rig (Offline Fallback)
+    note: "Dedicated GPU not detected or uninitialized. Using 2D Synthetic Viseme Rig (Offline Heuristic Fallback).",
+  };
+}
 export type AvatarLayout = "full_screen" | "split_screen" | "picture_in_picture";
 export type TaleemiDuniyaMode =
   | "promotional"
