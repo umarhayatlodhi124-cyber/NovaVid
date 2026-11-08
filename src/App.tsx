@@ -109,6 +109,7 @@ import { CreatorWorkspacePage } from "./components/CreatorWorkspacePage";
 import { GoogleYouTubeConnectionCenter } from "./components/GoogleYouTubeConnectionCenter";
 import { BetaFeedbackModal } from "./components/BetaFeedbackModal";
 import { OneClickVideoCreator } from "./components/OneClickVideoCreator";
+import { CloudAuthModal } from "./components/CloudAuthModal";
 import {
   getStoredResourceMode,
   setStoredResourceMode,
@@ -209,6 +210,7 @@ function App() {
   const [view, setView] = useState<View>("dashboard");
   const [projects, setProjects] = useState<Project[]>([]);
   const [firebaseUser, setFirebaseUser] = useState<User | null>(auth.currentUser);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [storageState, setStorageState] = useState<StorageState>("connecting");
   const [storageIssue, setStorageIssue] = useState<string | null>(null);
   const [modalProject, setModalProject] = useState<Project | null | undefined>();
@@ -543,6 +545,14 @@ function App() {
       setScriptTitle(created.name);
       setScriptLanguage(created.language);
       setResearchTopic(created.topic);
+      if (isTauriEnvironment()) {
+        setQuickToast("Project saved to local SQLite database");
+      } else if (firebaseUser) {
+        setQuickToast(`Project synced to Cloud Firestore (${firebaseUser.email})`);
+      } else {
+        setQuickToast("Project saved in local guest workspace. Sign in to sync across browsers!");
+      }
+      setTimeout(() => setQuickToast(null), 4000);
     }
     await refreshProjects();
   }
@@ -917,16 +927,42 @@ function App() {
             >
               <span>ðŸ’¬</span> <span style={{ opacity: 0.9 }}>Beta Feedback</span>
             </button>
+            {!isTauriEnvironment() && !firebaseUser && (
+              <button
+                type="button"
+                onClick={() => setIsAuthModalOpen(true)}
+                style={{
+                  backgroundColor: "#2563eb",
+                  color: "#ffffff",
+                  border: "none",
+                  borderRadius: "6px",
+                  padding: "5px 12px",
+                  fontSize: "0.8rem",
+                  fontWeight: 600,
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "6px",
+                  boxShadow: "0 1px 3px rgba(0,0,0,0.3)",
+                }}
+                title="Sign in to sync your projects across browsers and devices"
+              >
+                <span>☁️</span>
+                <span>Sign In / Cloud Sync</span>
+              </button>
+            )}
             <div
               className={`storage-indicator ${storageState}`}
               role="status"
+              onClick={() => !isTauriEnvironment() && setIsAuthModalOpen(true)}
+              style={!isTauriEnvironment() ? { cursor: "pointer" } : undefined}
               title={
                 storageState === "ready"
                   ? isTauriEnvironment()
                     ? "Projects are stored in the local SQLite database"
                     : firebaseUser
-                      ? `Signed in as ${firebaseUser.email} — Cloud Firestore Synced (novavid-ecfc8)`
-                      : "Local Web Workspace — Guest projects stored on this device"
+                      ? `Signed in as ${firebaseUser.email} — Cloud Firestore Synced (novavid-ecfc8). Click to manage.`
+                      : "Local Web Workspace — Guest projects stored on this device. Click to sign in and sync to Cloud."
                   : "Connecting to project storage"
               }
             >
@@ -936,7 +972,7 @@ function App() {
                   ? "Local storage ready"
                   : firebaseUser
                     ? "Cloud synced"
-                    : "Web workspace"
+                    : "Guest (Local only)"
                 : storageState === "connecting"
                   ? "Connecting"
                   : "Storage unavailable"}
@@ -944,7 +980,15 @@ function App() {
             <div
               className="topbar-avatar"
               aria-label="Workspace profile"
-              title={firebaseUser?.email ? `Logged in as ${firebaseUser.email}` : "Local Creator Profile"}
+              onClick={() => !isTauriEnvironment() && setIsAuthModalOpen(true)}
+              style={!isTauriEnvironment() ? { cursor: "pointer" } : undefined}
+              title={
+                firebaseUser?.email
+                  ? `Logged in as ${firebaseUser.email} — Click for Cloud Account options`
+                  : isTauriEnvironment()
+                    ? "Local Creator Profile"
+                    : "Guest Creator Profile — Click to Sign In"
+              }
             >
               {firebaseUser?.email ? firebaseUser.email[0].toUpperCase() : "U"}
             </div>
@@ -978,6 +1022,45 @@ function App() {
                 Retry
               </button>
             )}
+          </div>
+        )}
+
+        {!isTauriEnvironment() && !firebaseUser && (
+          <div
+            style={{
+              backgroundColor: "rgba(37, 99, 235, 0.08)",
+              borderBottom: "1px solid rgba(59, 130, 246, 0.25)",
+              padding: "8px 24px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              fontSize: "0.82rem",
+              color: "#bfdbfe",
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              <span>☁️</span>
+              <span>
+                <strong>Cloud Persistence:</strong> You are currently in Guest Web Mode. Projects created here are stored locally on this browser. Sign in to sync across Normal &amp; Incognito windows and other devices.
+              </span>
+            </div>
+            <button
+              onClick={() => setIsAuthModalOpen(true)}
+              style={{
+                backgroundColor: "#2563eb",
+                color: "#ffffff",
+                border: "none",
+                borderRadius: "4px",
+                padding: "4px 10px",
+                fontSize: "0.75rem",
+                fontWeight: 600,
+                cursor: "pointer",
+                whiteSpace: "nowrap",
+                marginLeft: "12px",
+              }}
+            >
+              Sign In to Cloud
+            </button>
           </div>
         )}
 
@@ -1311,6 +1394,15 @@ Please structure the script with the following sections:
         isOpen={isBetaFeedbackOpen}
         onClose={() => setIsBetaFeedbackOpen(false)}
         currentProjectId={selectedProjectId}
+      />
+
+      <CloudAuthModal
+        isOpen={isAuthModalOpen}
+        onClose={() => setIsAuthModalOpen(false)}
+        currentUser={firebaseUser}
+        onAuthSuccess={() => {
+          refreshProjects().catch(() => undefined);
+        }}
       />
 
       {quickToast && (

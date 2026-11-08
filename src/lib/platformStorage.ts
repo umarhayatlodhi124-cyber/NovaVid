@@ -1,6 +1,7 @@
 // NovaVid AI Studio — Platform-Aware Storage Adapter
-// Supports Windows Desktop (Tauri + SQLite) and Web Browser (Firebase Cloud Firestore + Local Cache)
+// Supports Windows Desktop (Tauri + SQLite) and Web Browser (Firebase Cloud Firestore + User Cache)
 // Target Project: novavid-ecfc8
+// Brand: LODHI TECHX
 
 import { auth, db } from "./firebase";
 import {
@@ -32,72 +33,64 @@ export function safeUUID(): string {
   });
 }
 
-const LOCAL_STORAGE_PROJECTS_KEY = "novavid_web_projects_cache";
-const LOCAL_STORAGE_GUEST_UID_KEY = "novavid_web_guest_uid";
+const GUEST_STORAGE_KEY = "novavid_guest_projects_cache";
+const CLOUD_CACHE_PREFIX = "novavid_cloud_projects_";
 
-let inMemoryProjects: Project[] = [];
-let memoryGuestUid = `guest_${safeUUID()}`;
+let inMemoryGuestProjects: Project[] = [];
+let inMemoryCloudProjects: Record<string, Project[]> = {};
 
 /**
- * Returns current authenticated user ID or persistent guest/anonymous web ID
+ * Returns current authenticated user ID or null if unauthenticated web visitor
  */
-export function getWebStorageUserId(): string {
-  if (auth?.currentUser?.uid) {
-    return auth.currentUser.uid;
-  }
-  if (typeof window !== "undefined" && window.localStorage) {
-    try {
-      let guestId = localStorage.getItem(LOCAL_STORAGE_GUEST_UID_KEY);
-      if (!guestId) {
-        guestId = `guest_${safeUUID()}`;
-        localStorage.setItem(LOCAL_STORAGE_GUEST_UID_KEY, guestId);
-      }
-      return guestId;
-    } catch {
-      // fallback
-    }
-  }
-  return memoryGuestUid;
+export function getWebStorageUserId(): string | null {
+  return auth?.currentUser?.uid || null;
 }
 
 /**
- * Ensures a valid web user session (authenticates anonymously if unauthenticated)
+ * Local cache helpers for user-specific data and guest projects
  */
-export async function ensureWebAuthUid(): Promise<string> {
-  if (auth?.currentUser?.uid) {
-    return auth.currentUser.uid;
-  }
-  try {
-    const { signInAnonymously } = await import("firebase/auth");
-    const cred = await signInAnonymously(auth);
-    return cred.user.uid;
-  } catch {
-    return getWebStorageUserId();
-  }
-}
-
-/**
- * Local cache helpers for instant UI feedback and 100% offline tolerance in browser
- */
-function getCachedProjects(): Project[] {
+function getGuestProjects(): Project[] {
   if (typeof window !== "undefined" && window.localStorage) {
     try {
-      const raw = localStorage.getItem(LOCAL_STORAGE_PROJECTS_KEY);
+      const raw = localStorage.getItem(GUEST_STORAGE_KEY);
       if (raw) return JSON.parse(raw);
     } catch {
       // fallback
     }
   }
-  return [...inMemoryProjects];
+  return [...inMemoryGuestProjects];
 }
 
-function setCachedProjects(projects: Project[]): void {
-  inMemoryProjects = [...projects];
+function setGuestProjects(projects: Project[]): void {
+  inMemoryGuestProjects = [...projects];
   if (typeof window !== "undefined" && window.localStorage) {
     try {
-      localStorage.setItem(LOCAL_STORAGE_PROJECTS_KEY, JSON.stringify(projects));
+      localStorage.setItem(GUEST_STORAGE_KEY, JSON.stringify(projects));
     } catch {
-      // ignore storage quota errors
+      // quota or storage unavailable
+    }
+  }
+}
+
+function getUserCache(uid: string): Project[] {
+  if (typeof window !== "undefined" && window.localStorage) {
+    try {
+      const raw = localStorage.getItem(`${CLOUD_CACHE_PREFIX}${uid}`);
+      if (raw) return JSON.parse(raw);
+    } catch {
+      // fallback
+    }
+  }
+  return inMemoryCloudProjects[uid] ? [...inMemoryCloudProjects[uid]] : [];
+}
+
+function setUserCache(uid: string, projects: Project[]): void {
+  inMemoryCloudProjects[uid] = [...projects];
+  if (typeof window !== "undefined" && window.localStorage) {
+    try {
+      localStorage.setItem(`${CLOUD_CACHE_PREFIX}${uid}`, JSON.stringify(projects));
+    } catch {
+      // ignore
     }
   }
 }
@@ -106,19 +99,22 @@ function setCachedProjects(projects: Project[]): void {
  * Web Firestore Project Storage Manager
  */
 export class WebFirestoreProjectStorage {
+  static lastSyncError: string | null = null;
+  static lastSyncTimestamp: string | null = null;
+
   /**
-   * List all projects owned by the current web user / guest tenant
+   * List projects. If authenticated, reads strictly from Cloud Firestore.
+   * If unauthenticated, returns local guest drafts.
    */
   static async listProjects(): Promise<Project[]> {
-    const userId = getWebStorageUserId();
-    const cached = getCachedProjects().filter((p: any) => !p.userId || p.userId === userId);
+    this.lastSyncError = null;
+    const user = auth?.currentUser;
 
-    try {
-      // Attempt authenticated Firestore query if auth is available
-      if (auth?.currentUser?.uid) {
+    if (user?.uid) {
+      try {
         const q = query(
           collection(db, "projects"),
-          where("userId", "==", auth.currentUser.uid)
+          where("userId", "==", user.uid)
         );
         const snap = await getDocs(q);
         const firestoreProjects: Project[] = [];
@@ -136,28 +132,41 @@ export class WebFirestoreProjectStorage {
           });
         });
 
-        // Sort by updated_at desc
+        // Sort by updated_at descending
         firestoreProjects.sort((a, b) => b.updated_at.localeCompare(a.updated_at));
 
-        if (firestoreProjects.length > 0) {
-          setCachedProjects(firestoreProjects);
-          return firestoreProjects;
+        setUserCache(user.uid, firestoreProjects);
+        this.lastSyncTimestamp = new Date().toISOString();
+        return firestoreProjects;
+      } catch (err: any) {
+        this.lastSyncError = err?.message || String(err);
+        console.error("Cloud Firestore list query failed:", err);
+        // If offline, fall back to this user's local cache
+        const cached = getUserCache(user.uid);
+        if (cached.length > 0) {
+          return cached;
         }
+        throw new Error(
+          `Could not connect to Cloud Firestore for user ${user.email || user.uid}: ${this.lastSyncError}`
+        );
       }
-    } catch (err) {
-      console.warn("Firestore query failed or offline; using local cache:", err);
     }
 
-    return cached;
+    // Guest / Unauthenticated: return local guest projects
+    return getGuestProjects();
   }
 
   /**
-   * Create a new project in Cloud Firestore and local cache
+   * Create a new project.
+   * If authenticated, writes strictly to Cloud Firestore. Throws on error (no silent mask).
+   * If unauthenticated, saves to guest storage.
    */
   static async createProject(input: ProjectInput): Promise<Project> {
-    const userId = getWebStorageUserId();
+    this.lastSyncError = null;
+    const user = auth?.currentUser;
     const now = new Date().toISOString();
-    const project: Project & { userId: string } = {
+
+    const project: Project = {
       id: safeUUID(),
       name: input.name,
       topic: input.topic,
@@ -165,51 +174,47 @@ export class WebFirestoreProjectStorage {
       status: "draft",
       created_at: now,
       updated_at: now,
-      userId,
     };
 
-    // 1. Instant local cache update (guarantees zero UI lag)
-    const current = getCachedProjects();
-    setCachedProjects([project, ...current]);
+    if (user?.uid) {
+      const cloudPayload = {
+        ...project,
+        userId: user.uid,
+      };
 
-    // 2. Cloud Firestore persistence (if authenticated)
-    if (auth?.currentUser?.uid) {
       try {
         const docRef = doc(db, "projects", project.id);
-        await setDoc(docRef, project, { merge: true });
-      } catch (err) {
-        console.warn("Failed to write to Cloud Firestore; persisted in local cache:", err);
+        await setDoc(docRef, cloudPayload);
+      } catch (err: any) {
+        this.lastSyncError = err?.message || String(err);
+        console.error("Cloud Firestore project creation failed:", err);
+        throw new Error(
+          `Cloud persistence failed: ${this.lastSyncError}. Project was not saved to Cloud Firestore.`
+        );
       }
+
+      // Update user cache on confirmed write
+      const current = getUserCache(user.uid);
+      setUserCache(user.uid, [project, ...current]);
+      this.lastSyncTimestamp = new Date().toISOString();
+      return project;
     }
 
+    // Guest Mode
+    const current = getGuestProjects();
+    setGuestProjects([project, ...current]);
     return project;
   }
 
   /**
-   * Update an existing project in Cloud Firestore and local cache
+   * Update an existing project in Cloud Firestore or guest storage
    */
   static async updateProject(id: string, input: ProjectInput): Promise<void> {
-    const userId = getWebStorageUserId();
+    this.lastSyncError = null;
+    const user = auth?.currentUser;
     const now = new Date().toISOString();
 
-    // 1. Update local cache
-    const current = getCachedProjects();
-    const updated = current.map((p) => {
-      if (p.id === id) {
-        return {
-          ...p,
-          name: input.name,
-          topic: input.topic,
-          language: input.language as ProjectLanguage,
-          updated_at: now,
-        };
-      }
-      return p;
-    });
-    setCachedProjects(updated);
-
-    // 2. Cloud Firestore update
-    if (auth?.currentUser?.uid) {
+    if (user?.uid) {
       try {
         const docRef = doc(db, "projects", id);
         await setDoc(
@@ -219,33 +224,98 @@ export class WebFirestoreProjectStorage {
             topic: input.topic,
             language: input.language,
             updated_at: now,
-            userId,
+            userId: user.uid,
           },
           { merge: true }
         );
-      } catch (err) {
-        console.warn("Failed to update Cloud Firestore; updated in local cache:", err);
+      } catch (err: any) {
+        this.lastSyncError = err?.message || String(err);
+        console.error("Cloud Firestore update failed:", err);
+        throw new Error(`Failed to update project in Cloud Firestore: ${this.lastSyncError}`);
       }
+
+      // Update cache
+      const current = getUserCache(user.uid);
+      const updated = current.map((p) =>
+        p.id === id
+          ? { ...p, name: input.name, topic: input.topic, language: input.language as ProjectLanguage, updated_at: now }
+          : p
+      );
+      setUserCache(user.uid, updated);
+      this.lastSyncTimestamp = new Date().toISOString();
+      return;
     }
+
+    // Guest Mode
+    const current = getGuestProjects();
+    const updated = current.map((p) =>
+      p.id === id
+        ? { ...p, name: input.name, topic: input.topic, language: input.language as ProjectLanguage, updated_at: now }
+        : p
+    );
+    setGuestProjects(updated);
   }
 
   /**
-   * Delete a project from Cloud Firestore and local cache
+   * Delete a project from Cloud Firestore or guest storage
    */
   static async deleteProject(id: string): Promise<void> {
-    // 1. Remove from local cache
-    const current = getCachedProjects();
-    const filtered = current.filter((p) => p.id !== id);
-    setCachedProjects(filtered);
+    this.lastSyncError = null;
+    const user = auth?.currentUser;
 
-    // 2. Remove from Cloud Firestore
-    if (auth?.currentUser?.uid) {
+    if (user?.uid) {
       try {
         const docRef = doc(db, "projects", id);
         await deleteDoc(docRef);
-      } catch (err) {
-        console.warn("Failed to delete from Cloud Firestore; removed from local cache:", err);
+      } catch (err: any) {
+        this.lastSyncError = err?.message || String(err);
+        console.error("Cloud Firestore delete failed:", err);
+        throw new Error(`Failed to delete project from Cloud Firestore: ${this.lastSyncError}`);
       }
+
+      // Remove from cache
+      const current = getUserCache(user.uid);
+      setUserCache(user.uid, current.filter((p) => p.id !== id));
+      this.lastSyncTimestamp = new Date().toISOString();
+      return;
     }
+
+    // Guest Mode
+    const current = getGuestProjects();
+    setGuestProjects(current.filter((p) => p.id !== id));
+  }
+
+  /**
+   * Migrates local guest projects to Cloud Firestore for the authenticated user
+   */
+  static async syncGuestProjectsToCloud(): Promise<number> {
+    const user = auth?.currentUser;
+    if (!user?.uid) {
+      throw new Error("Must be signed in to sync guest projects to Cloud Firestore.");
+    }
+
+    const guest = getGuestProjects();
+    if (guest.length === 0) return 0;
+
+    let syncedCount = 0;
+    for (const p of guest) {
+      const docRef = doc(db, "projects", p.id);
+      await setDoc(docRef, {
+        ...p,
+        userId: user.uid,
+      }, { merge: true });
+      syncedCount++;
+    }
+
+    // Clear guest storage
+    setGuestProjects([]);
+
+    // Refresh user cache
+    await this.listProjects();
+    return syncedCount;
+  }
+
+  static getGuestProjectsCount(): number {
+    return getGuestProjects().length;
   }
 }

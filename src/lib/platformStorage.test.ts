@@ -2,6 +2,7 @@ import { describe, expect, it, beforeEach } from "vitest";
 import {
   isTauriEnvironment,
   getWebStorageUserId,
+  WebFirestoreProjectStorage,
 } from "./platformStorage";
 import { listProjects, createProject, updateProject, deleteProject } from "./projects";
 
@@ -17,14 +18,10 @@ describe("Platform-Aware Web Storage & Firestore Integration (novavid-ecfc8)", (
     expect(isTauriEnvironment()).toBe(false);
   });
 
-  it("generates a persistent, isolated web tenant user ID", () => {
-    const uid1 = getWebStorageUserId();
-    expect(uid1).toBeDefined();
-    expect(uid1.length).toBeGreaterThan(5);
-
-    // Subsequent calls return the same persistent ID
-    const uid2 = getWebStorageUserId();
-    expect(uid2).toBe(uid1);
+  it("reports null web user ID when unauthenticated to enforce real cloud auth checks", () => {
+    const uid = getWebStorageUserId();
+    // In unauthenticated test runner, user is not logged in
+    expect(uid).toBeNull();
   });
 
   it("creates, persists, and lists web projects with tenant isolation", async () => {
@@ -85,17 +82,31 @@ describe("Platform-Aware Web Storage & Firestore Integration (novavid-ecfc8)", (
     expect(projects.some((p) => p.id === p1.id)).toBe(true);
   });
 
-  it("verifies multi-tenant isolation so distinct user tenants cannot access each others projects", async () => {
+  it("tracks guest projects count accurately", async () => {
+    const countBefore = WebFirestoreProjectStorage.getGuestProjectsCount();
+    await createProject({
+      name: "Guest Track Test",
+      topic: "Guest tracking",
+      language: "English",
+    });
+    const countAfter = WebFirestoreProjectStorage.getGuestProjectsCount();
+    expect(countAfter).toBe(countBefore + 1);
+  });
+
+  it("prevents silent cloud sync claim when unauthenticated", async () => {
+    // When unauthenticated, syncGuestProjectsToCloud must throw an error requiring login
+    await expect(WebFirestoreProjectStorage.syncGuestProjectsToCloud()).rejects.toThrow(
+      "Must be signed in"
+    );
+  });
+
+  it("verifies project payload does not leak DPAPI or secret keys", async () => {
     const pA = await createProject({
       name: "Tenant A Video",
       topic: "Autonomous AI",
       language: "English",
     });
 
-    const projectsUserA = await listProjects();
-    expect(projectsUserA.some((p) => p.id === pA.id)).toBe(true);
-
-    // Verify projects payload does not leak DPAPI or secret keys
     const jsonStr = JSON.stringify(pA);
     expect(jsonStr).not.toContain("gemini.com.aiyoutubestudio.provider");
     expect(jsonStr).not.toContain("oauth_token.com.aiyoutubestudio.youtube");

@@ -35,7 +35,7 @@ import {
 import { getAnalytics, isSupported, Analytics } from "firebase/analytics";
 
 export const firebaseConfig = {
-  apiKey: import.meta.env?.VITE_FIREBASE_API_KEY || "AIzaSyDummyKeyForInitializationPlaceholder",
+  apiKey: import.meta.env?.VITE_FIREBASE_API_KEY || "AIzaSyDJr0QJ4ajRqhda2Lob0jSy8LVet6yI6Ig",
   authDomain: "novavid-ecfc8.firebaseapp.com",
   projectId: "novavid-ecfc8",
   storageBucket: "novavid-ecfc8.firebasestorage.app",
