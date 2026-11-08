@@ -18,6 +18,7 @@ import {
   type AwsAccountConnection,
 } from "../lib/awsByoaService";
 import { buildAwsDeploymentPlan } from "../lib/awsInfrastructureDeployment";
+import { buildCustomerResourceInventory } from "../lib/multiTenantAwsSecurity";
 
 interface AwsConnectionCenterProps {
   tenantId?: string;
@@ -80,6 +81,17 @@ export const AwsConnectionCenter: React.FC<AwsConnectionCenterProps> = ({
     avgMinutes,
     storageGb,
     useSpotPricing
+  );
+
+  const [isDeployModalOpen, setIsDeployModalOpen] = useState(false);
+  const [isCleanupModalOpen, setIsCleanupModalOpen] = useState(false);
+  const [confirmDeployAck, setConfirmDeployAck] = useState(false);
+  const [confirmDisconnectAck, setConfirmDisconnectAck] = useState(false);
+
+  const resourceInventory = buildCustomerResourceInventory(
+    tenantId,
+    connection.accountId || "123456789012",
+    regionInput
   );
 
   const deploymentPlan = buildAwsDeploymentPlan({
@@ -521,7 +533,7 @@ export const AwsConnectionCenter: React.FC<AwsConnectionCenterProps> = ({
               </div>
             </div>
 
-            <div className="flex flex-col sm:flex-row gap-3 pt-2">
+            <div className="flex flex-col sm:flex-row flex-wrap gap-3 pt-2">
               <button
                 type="button"
                 disabled={isVerifying}
@@ -531,14 +543,33 @@ export const AwsConnectionCenter: React.FC<AwsConnectionCenterProps> = ({
                 {isVerifying ? "Verifying STS Cross-Account Access..." : "⚡ Verify Connection & Check Quotas"}
               </button>
 
-              {connection.status === "connected" && (
-                <button
-                  type="button"
-                  onClick={handleDisconnect}
-                  className="px-4 py-2.5 bg-rose-950/40 hover:bg-rose-900/60 text-rose-300 border border-rose-500/40 font-semibold text-xs rounded-lg transition-all"
-                >
-                  Revoke & Disconnect AWS
-                </button>
+              {(connection.status === "connected" || connection.status === "quota_exceeded") && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => setIsDeployModalOpen(true)}
+                    className="px-4 py-2.5 bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 text-black font-bold text-xs rounded-lg shadow-lg shadow-amber-500/20 transition-all whitespace-nowrap"
+                  >
+                    🚀 Deploy My NovaVid Cloud Infrastructure
+                  </button>
+
+                  <button
+                    type="button"
+                    disabled={isVerifying}
+                    onClick={handleVerifyConnection}
+                    className="px-3 py-2.5 bg-gray-800 hover:bg-gray-700 text-gray-200 font-semibold text-xs rounded-lg transition-all"
+                  >
+                    🔄 Reconnect / Refresh
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setIsCleanupModalOpen(true)}
+                    className="px-4 py-2.5 bg-rose-950/40 hover:bg-rose-900/60 text-rose-300 border border-rose-500/40 font-semibold text-xs rounded-lg transition-all whitespace-nowrap"
+                  >
+                    ⚠️ Disconnect & Safe Cleanup
+                  </button>
+                </>
               )}
             </div>
           </div>
@@ -728,10 +759,180 @@ export const AwsConnectionCenter: React.FC<AwsConnectionCenterProps> = ({
               <p className="text-[11px] text-gray-400 italic">
                 * Note: This amount is billed directly to your AWS credit card by Amazon Web Services. NovaVid charges $0 fee.
               </p>
+
+              <div className="p-2.5 bg-amber-950/20 border border-amber-500/30 rounded-lg text-[11px] text-amber-300">
+                <span className="font-bold">⚠️ Notice on AWS Budgets:</span> AWS Budgets and CloudWatch Billing Alarms provide alerts via email/SNS, but do not automatically terminate running EC2/Batch instances. Set budget alerts in your AWS Console.
+              </div>
             </div>
           </div>
         </div>
       </div>
+
+      {/* Modal 1: Deploy Customer Cloud Infrastructure Confirmation (Phase 4) */}
+      {isDeployModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4">
+          <div className="bg-gray-900 border border-gray-800 rounded-xl max-w-2xl w-full p-6 space-y-4 shadow-2xl">
+            <div className="flex justify-between items-center pb-3 border-b border-gray-800">
+              <h3 className="text-lg font-bold text-white flex items-center space-x-2">
+                <span>🚀 Deploy My NovaVid Cloud Infrastructure</span>
+              </h3>
+              <button
+                type="button"
+                onClick={() => setIsDeployModalOpen(false)}
+                className="text-gray-400 hover:text-white text-lg font-bold"
+              >
+                ✕
+              </button>
+            </div>
+
+            <p className="text-xs text-gray-300">
+              You are about to launch your customer-owned rendering infrastructure stack in your AWS account ({connection.accountId || "Connected"}).
+            </p>
+
+            <div className="space-y-2 text-xs">
+              <p className="font-semibold text-gray-200">Resources to be provisioned in your AWS Account:</p>
+              <ul className="list-disc list-inside space-y-1 text-gray-400 bg-gray-950 p-3 rounded-lg border border-gray-800">
+                <li><span className="text-white font-mono">S3 Input Bucket:</span> Raw project media, audio clips & fonts</li>
+                <li><span className="text-white font-mono">S3 Output Bucket:</span> Rendered MP4 videos & YouTube thumbnails</li>
+                <li><span className="text-white font-mono">ECR Repository:</span> NovaVid headless GPU worker container image</li>
+                <li><span className="text-white font-mono">AWS Batch Compute Environment:</span> Managed Spot GPU cluster (scales to 0 min vCPUs)</li>
+                <li><span className="text-white font-mono">AWS Batch Job Queue & Definition:</span> 1 GPU, 4 vCPUs, 16GB RAM container spec</li>
+              </ul>
+            </div>
+
+            <div className="p-3 bg-amber-950/30 border border-amber-500/40 rounded-lg text-xs text-amber-300 space-y-1">
+              <p className="font-bold">Cost & Quota Disclosure:</p>
+              <p className="text-[11px] leading-relaxed">
+                • Minimum GPU compute is set to 0. Zero compute charges accrue while idle ($0/hr).<br />
+                • When rendering, Spot compute is billed by AWS at ~$0.158/hr. S3 storage is ~$0.023/GB.<br />
+                • If your GPU service quota (L-384A81E9) is 0, Batch jobs will queue until AWS grants your vCPU quota increase.
+              </p>
+            </div>
+
+            <label className="flex items-start space-x-2 text-xs text-gray-300 pt-1 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={confirmDeployAck}
+                onChange={(e) => setConfirmDeployAck(e.target.checked)}
+                className="accent-amber-500 h-4 w-4 mt-0.5 rounded"
+              />
+              <span>
+                I confirm that I own this AWS account, authorize creation of these CloudFormation resources, and agree to pay AWS directly for my usage with zero SaaS markup.
+              </span>
+            </label>
+
+            <div className="flex justify-end space-x-3 pt-3 border-t border-gray-800">
+              <button
+                type="button"
+                onClick={() => setIsDeployModalOpen(false)}
+                className="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-lg text-xs"
+              >
+                Cancel
+              </button>
+              <a
+                href={quickCreateUrl}
+                target="_blank"
+                rel="noreferrer"
+                onClick={() => setIsDeployModalOpen(false)}
+                className={`px-4 py-2 bg-gradient-to-r from-amber-600 to-amber-500 text-black font-bold rounded-lg text-xs shadow-lg transition-all ${
+                  confirmDeployAck ? "opacity-100 hover:from-amber-500 hover:to-amber-400" : "opacity-40 pointer-events-none"
+                }`}
+              >
+                Confirm & Launch Stack in AWS Console →
+              </a>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal 2: Disconnect & Safe Infrastructure Cleanup (Phase 8) */}
+      {isCleanupModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4">
+          <div className="bg-gray-900 border border-gray-800 rounded-xl max-w-2xl w-full p-6 space-y-4 shadow-2xl">
+            <div className="flex justify-between items-center pb-3 border-b border-gray-800">
+              <h3 className="text-lg font-bold text-white flex items-center space-x-2">
+                <span>⚠️ Disconnect AWS Account & Safe Cleanup</span>
+              </h3>
+              <button
+                type="button"
+                onClick={() => setIsCleanupModalOpen(false)}
+                className="text-gray-400 hover:text-white text-lg font-bold"
+              >
+                ✕
+              </button>
+            </div>
+
+            <p className="text-xs text-gray-300">
+              Review resource inventory before disconnecting AWS Account ({connection.accountId}).
+            </p>
+
+            <div className="space-y-2 text-xs">
+              <p className="font-semibold text-gray-200">Customer AWS Resource Inventory:</p>
+              <div className="bg-gray-950 p-3 rounded-lg border border-gray-800 space-y-2 max-h-48 overflow-y-auto font-mono text-[11px]">
+                {resourceInventory.resources.map((res) => (
+                  <div key={res.arn} className="flex justify-between items-center border-b border-gray-800/60 pb-1">
+                    <div>
+                      <span className="text-white font-semibold">{res.name}</span>
+                      <p className="text-[10px] text-gray-500">{res.type}</p>
+                    </div>
+                    {res.hasCustomerData ? (
+                      <span className="px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 text-[10px]">
+                        PROTECTED MEDIA
+                      </span>
+                    ) : (
+                      <span className="px-1.5 py-0.5 rounded bg-gray-800 text-gray-400 text-[10px]">
+                        SAFE TO DELETE
+                      </span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="p-3 bg-rose-950/30 border border-rose-500/40 rounded-lg text-xs text-rose-300 space-y-1">
+              <p className="font-bold">Data Protection Policy:</p>
+              <p className="text-[11px]">
+                NovaVid will **never delete your customer S3 media buckets** automatically. Your raw assets and rendered videos remain safely preserved in your AWS account unless you manually delete them from your AWS S3 Console.
+              </p>
+            </div>
+
+            <label className="flex items-start space-x-2 text-xs text-gray-300 pt-1 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={confirmDisconnectAck}
+                onChange={(e) => setConfirmDisconnectAck(e.target.checked)}
+                className="accent-rose-500 h-4 w-4 mt-0.5 rounded"
+              />
+              <span>
+                I understand that disconnecting revokes STS temporary session tokens, cancels active render queue monitoring, and clears local AWS connection credentials.
+              </span>
+            </label>
+
+            <div className="flex justify-end space-x-3 pt-3 border-t border-gray-800">
+              <button
+                type="button"
+                onClick={() => setIsCleanupModalOpen(false)}
+                className="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-lg text-xs"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={!confirmDisconnectAck}
+                onClick={() => {
+                  handleDisconnect();
+                  setIsCleanupModalOpen(false);
+                }}
+                className={`px-4 py-2 bg-rose-600 text-white font-bold rounded-lg text-xs shadow-lg transition-all ${
+                  confirmDisconnectAck ? "opacity-100 hover:bg-rose-500" : "opacity-40 cursor-not-allowed"
+                }`}
+              >
+                Confirm Disconnect & Revoke Access
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

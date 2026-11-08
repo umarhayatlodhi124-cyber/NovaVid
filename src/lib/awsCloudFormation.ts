@@ -67,6 +67,36 @@ Resources:
             Prefix: renders/temp/
             ExpirationInDays: 30
 
+  # Dedicated customer raw asset input bucket
+  NovaVidCustomerInputBucket:
+    Type: 'AWS::S3::Bucket'
+    Properties:
+      BucketName: !Sub 'novavid-\${TenantIdentifier}-input-\${AWS::Region}'
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: 'AES256'
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        IgnorePublicAcls: true
+        BlockPublicPolicy: true
+        RestrictPublicBuckets: true
+
+  # Dedicated customer finished video output bucket
+  NovaVidCustomerOutputBucket:
+    Type: 'AWS::S3::Bucket'
+    Properties:
+      BucketName: !Sub 'novavid-\${TenantIdentifier}-output-\${AWS::Region}'
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: 'AES256'
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        IgnorePublicAcls: true
+        BlockPublicPolicy: true
+        RestrictPublicBuckets: true
+
   # Cross-account execution role assumed by NovaVid Control Plane
   NovaVidCustomerExecutionRole:
     Type: 'AWS::IAM::Role'
@@ -110,6 +140,10 @@ Resources:
             Resource:
               - !GetAtt NovaVidCustomerMediaBucket.Arn
               - !Sub '\${NovaVidCustomerMediaBucket.Arn}/*'
+              - !GetAtt NovaVidCustomerInputBucket.Arn
+              - !Sub '\${NovaVidCustomerInputBucket.Arn}/*'
+              - !GetAtt NovaVidCustomerOutputBucket.Arn
+              - !Sub '\${NovaVidCustomerOutputBucket.Arn}/*'
 
           # CloudWatch Logs for render job execution telemetry
           - Sid: CloudWatchLogTelemetry
@@ -189,6 +223,18 @@ Outputs:
     Value: !Ref NovaVidCustomerMediaBucket
     Export:
       Name: !Sub '\${AWS::StackName}-BucketName'
+
+  InputBucketName:
+    Description: 'Customer S3 Raw Media Input Bucket Name'
+    Value: !Ref NovaVidCustomerInputBucket
+    Export:
+      Name: !Sub '\${AWS::StackName}-InputBucketName'
+
+  OutputBucketName:
+    Description: 'Customer S3 Final Video Output Bucket Name'
+    Value: !Ref NovaVidCustomerOutputBucket
+    Export:
+      Name: !Sub '\${AWS::StackName}-OutputBucketName'
 
   Region:
     Description: 'AWS Region of deployment'
