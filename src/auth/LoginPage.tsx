@@ -38,19 +38,6 @@ export const LoginPage: React.FC = () => {
     }
   };
 
-  const handleQuickDemoLogin = async () => {
-    setLocalError(null);
-    clearError();
-    setLoading(true);
-    try {
-      await login("test.lodhitechx@novavid.studio", "NovaVidTechX2026!");
-    } catch (err: any) {
-      setLocalError(err?.message || "Creator sign in failed");
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const displayError = localError || error;
 
   return (
@@ -248,34 +235,10 @@ export const LoginPage: React.FC = () => {
             alignItems: "center",
             justifyContent: "center",
             gap: "10px",
-            marginBottom: "12px",
-          }}
-        >
-          <span>🌐</span> Sign in with Google
-        </button>
-
-        <button
-          type="button"
-          onClick={handleQuickDemoLogin}
-          disabled={loading}
-          style={{
-            width: "100%",
-            backgroundColor: "rgba(30, 58, 138, 0.3)",
-            border: "1px solid #2563eb",
-            color: "#93c5fd",
-            borderRadius: "8px",
-            padding: "9px",
-            fontSize: "0.82rem",
-            fontWeight: 600,
-            cursor: "pointer",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: "8px",
             marginBottom: "20px",
           }}
         >
-          <span>⚡</span> Quick LODHI TECHX Creator Sign-In
+          <span>🌐</span> Sign in with Google
         </button>
 
         <div style={{ textAlign: "center", fontSize: "0.85rem", color: "#9ca3af" }}>

@@ -66,21 +66,6 @@ export const CloudAuthModal: React.FC<CloudAuthModalProps> = ({
     }
   };
 
-  const handleQuickLODHITestSignIn = async () => {
-    setError(null);
-    setSuccessMsg(null);
-    setLoading(true);
-    try {
-      await loginWithEmail("test.lodhitechx@novavid.studio", "NovaVidTechX2026!");
-      setSuccessMsg("Signed in as verified LODHI TECHX Creator test account!");
-      onAuthSuccess();
-    } catch (err: any) {
-      setError(err?.message || "Failed to sign in with LODHI TECHX account.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const handleGoogleSignIn = async () => {
     setError(null);
     setSuccessMsg(null);
@@ -457,30 +442,6 @@ export const CloudAuthModal: React.FC<CloudAuthModalProps> = ({
                 OR INSTANT ONE-CLICK
               </span>
             </div>
-
-            <button
-              type="button"
-              onClick={handleQuickLODHITestSignIn}
-              disabled={loading}
-              style={{
-                width: "100%",
-                backgroundColor: "#1e3a8a",
-                border: "1px solid #3b82f6",
-                color: "#93c5fd",
-                borderRadius: "6px",
-                padding: "9px",
-                fontSize: "0.85rem",
-                fontWeight: 600,
-                cursor: "pointer",
-                marginBottom: "8px",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: "8px",
-              }}
-            >
-              <span>⚡</span> One-Click LODHI TECHX Creator Sign-In
-            </button>
 
             <button
               type="button"

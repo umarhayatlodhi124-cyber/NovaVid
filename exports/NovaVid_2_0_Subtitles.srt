@@ -1,0 +1,14 @@
+1
+00:00:00,000 --> 00:00:03,500
+السلام علیکم! نووا وڈ اے آئی اسٹوڈیو 2.0 میں خوش آمدید۔
+Assalam-o-Alaikum! Welcome to NovaVid AI Studio 2.0 by LODHI TECHX.
+
+2
+00:00:03,500 --> 00:00:07,000
+لوڈھی ٹیک ایکس — خودکار اے آئی ویڈیو کریشن اور ملٹی ٹیننٹ پلیٹ فارم۔
+Autonomous AI Video Creation and Multi-Tenant Cloud Platform.
+
+3
+00:00:07,000 --> 00:00:10,500
+کلاؤڈ سنک، ٹائم لائن ایڈیٹنگ اور خودکار یوٹیوب پبلشنگ۔
+Cloud Sync, Timeline Editing, and Automated YouTube Publishing.

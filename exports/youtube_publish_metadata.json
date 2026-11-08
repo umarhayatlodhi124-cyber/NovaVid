@@ -1,14 +1,18 @@
-﻿{
-    "categoryId":  "28",
-    "description":  "Official demonstration of NovaVid AI Studio by LODHI TECHX.",
-    "tags":  [
-                 "LODHI TECHX",
-                 "AI Studio",
-                 "YouTube Automation",
-                 "NovaVid",
-                 "Tech Tutorials"
-             ],
-    "privacyStatus":  "private",
-    "title":  "LODHI TECHX - AI Technology Breakthroughs \u0026 Studio Automation 2026",
-    "madeForKids":  false
+{
+  "title": "NovaVid AI Studio 2.0 — LODHI TECHX Official Master Launch",
+  "description": "Demonstration and Phase 4 Video Acceptance Test for NovaVid AI Studio 2.0 by LODHI TECHX. Multi-tenant cloud video SaaS and Windows desktop studio.",
+  "tags": [
+    "NovaVid",
+    "LODHI TECHX",
+    "AI Video Creation",
+    "YouTube Automation",
+    "Cloud SaaS"
+  ],
+  "categoryId": "28",
+  "privacyStatus": "private",
+  "madeForKids": false,
+  "renderedFilePath": "G:\\Nova Vid\\exports\\NovaVid_AI_Studio_2_0_Master_Acceptance_Video.mp4",
+  "renderedFileSize": 343546,
+  "durationSeconds": 10.5,
+  "status": "ready_for_upload"
 }

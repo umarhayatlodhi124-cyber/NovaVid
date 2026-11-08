@@ -1,10 +1,29 @@
-﻿{
-    "durationSeconds":  7,
-    "fps":  60,
-    "videoPath":  "G:\\Nova Vid\\exports\\LODHI_TECHX_AI_Technology_Test_Video.mp4",
-    "projectId":  "proj_lodhi_techx_test_01",
-    "brand":  "LODHI TECHX",
-    "projectName":  "LODHI TECHX - AI Technology Test Video",
-    "createdAt":  "2026-11-07T15:13:59.7572084+05:00",
-    "resolution":  "1080p"
+{
+  "id": "novavid-2-master-release-01",
+  "name": "NovaVid AI Studio 2.0 Official Master Launch",
+  "topic": "Autonomous Commercial AI Video Creation & Multi-Tenant SaaS",
+  "language": "Urdu / English Bilingual",
+  "brand": "LODHI TECHX",
+  "status": "rendered",
+  "created_at": "2026-11-08T05:34:10.624Z",
+  "scenes": [
+    {
+      "title": "Intro: Welcome to NovaVid 2.0",
+      "duration": 3.5,
+      "narration": "Assalam-o-Alaikum! Welcome to NovaVid AI Studio 2.0 by LODHI TECHX.",
+      "visual": "Radial Dark Studio Background with NovaVid TechX Branding"
+    },
+    {
+      "title": "Cloud Persistence & Multi-Tenant Architecture",
+      "duration": 3.5,
+      "narration": "Autonomous Commercial AI Video Creation and Multi-Tenant SaaS Platform.",
+      "visual": "Cloud Synchronization & Tenant Security Diagram"
+    },
+    {
+      "title": "Production Ready & YouTube Automation",
+      "duration": 3.5,
+      "narration": "Complete video production, FFmpeg editing, and automated YouTube publishing.",
+      "visual": "Full-Resolution 1080p H.264 MP4 with Synchronized AAC Audio"
+    }
+  ]
 }
