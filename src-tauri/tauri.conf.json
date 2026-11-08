@@ -1,0 +1,49 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "NovaVid AI YouTube Studio",
+  "version": "0.1.0",
+  "identifier": "com.aiyoutubestudio.app",
+  "build": {
+    "beforeDevCommand": "npm run dev",
+    "devUrl": "http://localhost:1420",
+    "beforeBuildCommand": "npm run build",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "NovaVid AI YouTube Studio — LODHI TECHX",
+        "width": 1440,
+        "height": 960,
+        "minWidth": 980,
+        "minHeight": 680
+      }
+    ],
+    "security": {
+      "csp": "default-src 'self'; img-src 'self' asset: http://asset.localhost data: blob:; media-src 'self' asset: http://asset.localhost blob:; style-src 'self' 'unsafe-inline'; font-src 'self'; connect-src ipc: http://ipc.localhost"
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": ["nsis"],
+    "publisher": "LODHI TECHX",
+    "copyright": "Copyright © 2026 LODHI TECHX. All rights reserved.",
+    "shortDescription": "NovaVid AI YouTube Studio by LODHI TECHX",
+    "longDescription": "NovaVid AI YouTube Studio: Professional AI-powered YouTube production platform for automated scriptwriting, voiceover generation, FFmpeg editing, and direct YouTube publishing.",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "windows": {
+      "nsis": {
+        "installMode": "currentUser",
+        "installerIcon": "icons/icon.ico",
+        "languages": ["English"],
+        "displayLanguageSelector": false
+      }
+    }
+  }
+}

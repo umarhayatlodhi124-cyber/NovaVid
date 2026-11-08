@@ -1,0 +1,140 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "NovaVid AI YouTube Studio Production API",
+    "description": "Multi-tenant cloud backend for NovaVid AI Studio by LODHI TECHX. Handles customer authentication, project sync, asymmetric licensing, and payment webhooks.",
+    "version": "0.1.0-production",
+    "contact": {
+      "name": "LODHI TECHX Support",
+      "email": "support@novavid.studio"
+    }
+  },
+  "servers": [
+    {
+      "url": "https://api.novavid.studio",
+      "description": "Production Cloud Host"
+    },
+    {
+      "url": "http://localhost:3001",
+      "description": "Local Development Server"
+    }
+  ],
+  "paths": {
+    "/api/v1/health": {
+      "get": {
+        "summary": "Health, Liveness and Readiness Probe",
+        "responses": {
+          "200": { "description": "Backend is operational" }
+        }
+      }
+    },
+    "/api/v1/plans": {
+      "get": {
+        "summary": "Get all active commercial subscription plans and quotas",
+        "responses": {
+          "200": { "description": "List of active plans" }
+        }
+      }
+    },
+    "/api/v1/auth/register": {
+      "post": {
+        "summary": "Register new creator account and tenant organization",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["email", "password", "fullName"],
+                "properties": {
+                  "email": { "type": "string" },
+                  "password": { "type": "string" },
+                  "fullName": { "type": "string" },
+                  "organizationName": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": { "description": "Account and Organization Created" },
+          "409": { "description": "Email already registered" }
+        }
+      }
+    },
+    "/api/v1/auth/login": {
+      "post": {
+        "summary": "Authenticate user and issue session token",
+        "responses": {
+          "200": { "description": "Authentication successful" },
+          "401": { "description": "Invalid credentials" }
+        }
+      }
+    },
+    "/api/v1/auth/me": {
+      "get": {
+        "summary": "Retrieve authenticated user, organization, and subscription context",
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": { "description": "User profile" },
+          "401": { "description": "Unauthorized" }
+        }
+      }
+    },
+    "/api/v1/projects": {
+      "get": {
+        "summary": "List cloud projects belonging strictly to caller's tenant organization",
+        "security": [{ "bearerAuth": [] }],
+        "responses": { "200": { "description": "List of projects" } }
+      },
+      "post": {
+        "summary": "Synchronize project metadata to cloud storage",
+        "security": [{ "bearerAuth": [] }],
+        "responses": { "200": { "description": "Project synchronized" } }
+      }
+    },
+    "/api/v1/licenses/activate": {
+      "post": {
+        "summary": "Bind hardware machine fingerprint to commercial license under device quota",
+        "security": [{ "bearerAuth": [] }],
+        "responses": { "200": { "description": "Device bound successfully" } }
+      }
+    },
+    "/api/v1/devices/unbind": {
+      "post": {
+        "summary": "Release workstation seat authorization",
+        "security": [{ "bearerAuth": [] }],
+        "responses": { "200": { "description": "Device unbinded" } }
+      }
+    },
+    "/api/v1/webhooks/billing": {
+      "post": {
+        "summary": "Process incoming LemonSqueezy, Stripe, or Paddle billing webhook",
+        "responses": { "200": { "description": "Event processed idempotently" } }
+      }
+    },
+    "/api/v1/support/ticket": {
+      "post": {
+        "summary": "Submit in-app customer support request",
+        "security": [{ "bearerAuth": [] }],
+        "responses": { "201": { "description": "Ticket created" } }
+      }
+    },
+    "/api/v1/admin/fleet": {
+      "get": {
+        "summary": "Super Admin Fleet Telemetry & MRR",
+        "security": [{ "bearerAuth": [] }],
+        "responses": { "200": { "description": "Fleet stats" } }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    }
+  }
+}

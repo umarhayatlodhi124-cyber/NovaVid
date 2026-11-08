@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Customer Registration — NovaVid AI YouTube Studio (LODHI TECHX)</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-950 text-slate-100 antialiased font-sans flex flex-col min-h-screen">
+  <header class="border-b border-slate-800 bg-slate-950/80 backdrop-blur-md">
+    <div class="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
+      <a href="index.html" class="flex items-center gap-3">
+        <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-sky-500 to-indigo-600 flex items-center justify-center font-bold text-white shadow-lg">N</div>
+        <span class="text-lg font-black tracking-tight text-white">NovaVid <span class="text-sky-400">AI</span></span>
+      </a>
+      <a href="index.html" class="text-xs text-slate-400 hover:text-white">← Home</a>
+    </div>
+  </header>
+
+  <main class="flex-1 flex items-center justify-center px-4 py-12">
+    <div class="max-w-md w-full bg-slate-900 border border-slate-800 rounded-2xl p-8 shadow-2xl">
+      <div class="text-center mb-6">
+        <span class="px-2.5 py-1 rounded bg-sky-500/10 border border-sky-500/30 text-sky-400 text-[10px] font-bold uppercase tracking-wider">
+          New Customer Account
+        </span>
+        <h1 class="text-2xl font-bold text-white mt-2">Create Your Account</h1>
+        <p class="text-xs text-slate-400 mt-1">Get immediate access to the NovaVid AI Workstation and Customer Portal.</p>
+      </div>
+
+      <form class="space-y-4 text-xs" onsubmit="event.preventDefault(); alert('Account registered successfully! Please proceed to plan selection or download.');">
+        <div>
+          <label class="block font-semibold text-slate-300 mb-1">Full Name</label>
+          <input required type="text" placeholder="e.g. Alex Johnson" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3.5 py-2.5 text-slate-200 focus:outline-none focus:border-sky-500" />
+        </div>
+
+        <div>
+          <label class="block font-semibold text-slate-300 mb-1">Email Address</label>
+          <input required type="email" placeholder="alex@domain.com" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3.5 py-2.5 text-slate-200 focus:outline-none focus:border-sky-500" />
+        </div>
+
+        <div>
+          <label class="block font-semibold text-slate-300 mb-1">Password</label>
+          <input required type="password" placeholder="Minimum 8 characters" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3.5 py-2.5 text-slate-200 focus:outline-none focus:border-sky-500" />
+        </div>
+
+        <div>
+          <label class="block font-semibold text-slate-300 mb-1">Organization / Channel Name</label>
+          <input required type="text" placeholder="e.g. Modern Tech Media" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3.5 py-2.5 text-slate-200 focus:outline-none focus:border-sky-500" />
+        </div>
+
+        <div class="flex items-start gap-2 pt-1 text-[11px] text-slate-400">
+          <input required type="checkbox" id="terms" class="mt-0.5 rounded border-slate-800 bg-slate-950 text-sky-600" />
+          <label for="terms">I agree to the <a href="terms.html" class="text-sky-400 hover:underline">Terms of Service</a> and <a href="privacy.html" class="text-sky-400 hover:underline">Privacy Policy</a>.</label>
+        </div>
+
+        <button type="submit" class="w-full py-3 rounded-xl bg-sky-600 hover:bg-sky-500 text-white font-bold text-xs uppercase tracking-wider shadow-lg shadow-sky-600/30 transition-all">
+          Create Customer Account
+        </button>
+      </form>
+
+      <div class="mt-6 pt-4 border-t border-slate-800 text-center text-xs text-slate-400">
+        Already have an account? <a href="login.html" class="text-sky-400 font-semibold hover:underline">Sign In</a>
+      </div>
+    </div>
+  </main>
+
+  <footer class="py-6 border-t border-slate-800 text-center text-xs text-slate-500">
+    © 2026 LODHI TECHX. All rights reserved.
+  </footer>
+</body>
+</html>
