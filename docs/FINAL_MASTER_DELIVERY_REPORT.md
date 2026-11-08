@@ -107,9 +107,11 @@ In accordance with strict operational integrity standards:
 ### Windows Desktop NSIS Installers:
 - **Artifact Directory:** `G:\Nova Vid\src-tauri\target\release\bundle\nsis\`
 - **Release Packages:**
-  1. `NovaVid AI Studio_0.2.0_x64-setup.exe`  
+  1. `NovaVid AI Studio_2.0.2_x64-setup.exe`  
+     *SHA-256:* `DA6A22EDBD12E30D382F3E0C931DD0F830236E942C308F486E17A52E176CDA75`
+  2. `NovaVid AI Studio_0.2.0_x64-setup.exe`  
      *SHA-256:* `400B044F69F8ECDE47B7574059BA2A9B8072FB7EDE08FC162F4274FFEA836870`
-  2. `NovaVid AI YouTube Studio_0.1.0_x64-setup.exe`  
+  3. `NovaVid AI YouTube Studio_0.1.0_x64-setup.exe`  
      *SHA-256:* `EBC6557E4EB2F8CDE65B1D4FC83F292B2088AFD486CB57C6DA59313BFC67B8F0`
 
 ---
