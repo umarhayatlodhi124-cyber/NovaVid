@@ -159,11 +159,29 @@ export default {
           status: "queued",
           progressPercent: 0,
           firestorePath: `tenants/${tenantId}/render_jobs/${jobId}`,
-          dispatchedTo: "container_render_cluster",
+          dispatchedTo: env?.GPU_RENDER_WORKER_URL ? "gpu_cloud_worker" : "container_render_cluster",
+          gpuWorkerEndpoint: env?.GPU_RENDER_WORKER_URL || null,
           maxConcurrency: 2,
           retriesConfigured: 3,
           submittedAt: new Date().toISOString(),
         };
+
+        // If a remote GPU worker is configured, forward dispatch asynchronously
+        if (env?.GPU_RENDER_WORKER_URL) {
+          ctx.waitUntil(
+            fetch(`${env.GPU_RENDER_WORKER_URL}/api/render-video`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json", Authorization: `Bearer ${env.WORKER_AUTH_TOKEN || ""}` },
+              body: JSON.stringify({
+                job_id: jobId,
+                tenant_id: tenantId,
+                project_id: projectId,
+                title: title || "Untitled Cloud Video",
+                scenes: body.scenes || [],
+              }),
+            }).catch((e) => console.error("[Cloudflare Gateway] GPU dispatch forward error:", e))
+          );
+        }
 
         return new Response(JSON.stringify(renderJobReceipt), {
           status: 200,

@@ -1,0 +1,57 @@
+# ==============================================================================
+# NovaVid AI Studio 2.0 — Production GPU Cloud Rendering & Neural Avatar Worker
+# NVIDIA CUDA 12.1 + PyTorch + Headless FFmpeg 6.1 Container
+# Target Platforms: RunPod Serverless / Modal / AWS EC2 G4dn/G5 / GCP Cloud Run GPU
+# Brand Owner: LODHI TECHX | Product: NovaVid AI Studio 2.0
+# ==============================================================================
+
+FROM nvidia/cuda:12.1.0-runtime-ubuntu22.04
+
+ENV DEBIAN_FRONTEND=noninteractive
+ENV PYTHONUNBUFFERED=1
+ENV RENDER_SCRATCH=/tmp/novavid_gpu_scratch
+
+# Install system dependencies, FFmpeg with NVENC support, and essential fonts
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    python3 \
+    python3-pip \
+    python3-dev \
+    ffmpeg \
+    fonts-noto-core \
+    fonts-noto-cjk \
+    fonts-noto-extra \
+    fonts-urw-base35 \
+    git \
+    curl \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+# Upgrade pip
+RUN python3 -m pip install --no-cache-dir --upgrade pip setuptools wheel
+
+WORKDIR /app
+
+# Copy requirements and install Python dependencies
+COPY cloud/requirements-gpu.txt /app/requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt || pip install --no-cache-dir fastapi uvicorn pydantic requests
+
+# Create non-root user and scratch directory
+RUN useradd -ms /bin/bash -u 1001 novavid && \
+    mkdir -p ${RENDER_SCRATCH} && \
+    chown -R novavid:novavid ${RENDER_SCRATCH} /app
+
+# Copy application files
+COPY cloud/gpu_server.py /app/gpu_server.py
+
+USER novavid
+
+EXPOSE 8080
+
+ENV PORT=8080
+ENV WORKER_CONCURRENCY=2
+
+# Healthcheck testing GPU and service responsiveness
+HEALTHCHECK --interval=30s --timeout=10s --start-period=15s --retries=3 \
+  CMD curl -f http://localhost:8080/health || exit 1
+
+CMD ["python3", "-m", "uvicorn", "gpu_server:app", "--host", "0.0.0.0", "--port", "8080"]
