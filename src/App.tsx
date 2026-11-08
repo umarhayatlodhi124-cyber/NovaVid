@@ -138,6 +138,7 @@ const URDU_NAV_LABELS: Record<string, string> = {
   "AI Agent (Auto)": "خودکار اے آئی ایجنٹ",
   "Creator Workspace": "تخلیقی ورک اسپیس",
   "Google & YouTube": "گوگل و یوٹیوب سنٹر",
+  "AWS Cloud Connection": "ایمازون کلاؤڈ کنکشن",
   "AWS Cloud (BYOA)": "ایمازون کلاؤڈ کمپیوٹنگ",
   Projects: "پروجیکٹس",
   "Media library": "میڈیا لائبریری",
@@ -191,7 +192,7 @@ const URDU_PAGE_TITLES: Record<string, string> = {
   settings: "سیٹنگز",
 };
 
-const navigation = [
+export const navigation = [
   { label: "Overview", view: "dashboard" as const, icon: "grid" },
   { label: "Daily Automation", view: "automation" as const, icon: "spark" },
   { label: "AI Face Presenter", view: "avatar" as const, icon: "video" },
@@ -200,7 +201,7 @@ const navigation = [
   { label: "AI Agent (Auto)", view: "agent" as const, icon: "spark" },
   { label: "Creator Workspace", view: "creator" as const, icon: "spark" },
   { label: "Google & YouTube", view: "google_youtube" as const, icon: "spark" },
-  { label: "AWS Cloud (BYOA)", view: "aws_cloud" as const, icon: "render" },
+  { label: "AWS Cloud Connection", view: "aws_cloud" as const, icon: "render" },
   { label: "Projects", view: "projects" as const, icon: "folder" },
   { label: "Media library", view: "media" as const, icon: "media" },
   { label: "AI Providers", view: "providers" as const, icon: "spark" },
@@ -221,6 +222,20 @@ const navigation = [
   { label: "Admin SaaS", view: "admin_saas" as const, icon: "shield" },
   { label: "Settings", view: "settings" as const, icon: "settings" },
 ];
+
+export function getFilteredNavigation(mode: UserMode) {
+  if (mode === "beginner") {
+    return navigation.filter((item) =>
+      ["dashboard", "automation", "avatar", "google_youtube", "aws_cloud", "agent", "projects", "publish", "settings"].includes(item.view)
+    );
+  }
+  if (mode === "creator") {
+    return navigation.filter((item) =>
+      !["license", "customer_saas", "admin_saas", "analytics", "research", "providers"].includes(item.view)
+    );
+  }
+  return navigation; // Advanced mode shows all
+}
 
 const plannedNavigation = [
   { label: "Content planner", icon: "calendar" },
@@ -650,19 +665,7 @@ function App() {
     ? (URDU_PAGE_TITLES[view] || englishPageTitle)
     : englishPageTitle;
 
-  const filteredNavigation = useMemo(() => {
-    if (userMode === "beginner") {
-      return navigation.filter((item) =>
-        ["dashboard", "agent", "projects", "publish", "settings"].includes(item.view)
-      );
-    }
-    if (userMode === "creator") {
-      return navigation.filter((item) =>
-        !["license", "customer_saas", "admin_saas", "analytics", "research", "providers"].includes(item.view)
-      );
-    }
-    return navigation; // Advanced mode shows all
-  }, [userMode]);
+  const filteredNavigation = useMemo(() => getFilteredNavigation(userMode), [userMode]);
 
   async function handleNativeMediaImport() {
     try {
@@ -1429,6 +1432,7 @@ Please structure the script with the following sections:
               settings={studioSettings}
               onChange={(nextSettings) => setStudioSettings(normalizeStudioSettings(nextSettings))}
               onNavigateToConnectionCenter={() => setView("google_youtube")}
+              onNavigateToAwsConnection={() => setView("aws_cloud")}
             />
           )}
         </div>
@@ -1932,10 +1936,12 @@ function SettingsPage({
   onChange,
   settings,
   onNavigateToConnectionCenter,
+  onNavigateToAwsConnection,
 }: {
   onChange: (next: StudioSettings) => void;
   settings: StudioSettings;
   onNavigateToConnectionCenter?: () => void;
+  onNavigateToAwsConnection?: () => void;
 }) {
   return (
     <>
@@ -1945,7 +1951,17 @@ function SettingsPage({
           <h1>Studio defaults</h1>
           <p>Keep local defaults consistent across your next video projects.</p>
         </div>
-        <div style={{ display: "flex", gap: "10px" }}>
+        <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
+          {onNavigateToAwsConnection && (
+            <button
+              className="button button-primary"
+              onClick={onNavigateToAwsConnection}
+              type="button"
+              style={{ background: "linear-gradient(135deg, #d97706, #f59e0b)", borderColor: "#b45309" }}
+            >
+              ☁️ AWS Cloud Connection
+            </button>
+          )}
           {onNavigateToConnectionCenter && (
             <button className="button button-primary" onClick={onNavigateToConnectionCenter} type="button">
               ðŸŒ Google & YouTube Center
@@ -1956,6 +1972,29 @@ function SettingsPage({
           </button>
         </div>
       </section>
+
+      {/* AWS Cloud Connection Center Banner */}
+      <div style={{ marginBottom: "16px", padding: "16px", borderRadius: "12px", background: "linear-gradient(135deg, rgba(245,158,11,0.15), rgba(217,119,6,0.15))", border: "1px solid rgba(245,158,11,0.3)", display: "flex", justifyContent: "space-between", alignItems: "center", gap: "16px", flexWrap: "wrap" }}>
+        <div>
+          <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "4px" }}>
+            <span style={{ fontSize: "0.7rem", fontWeight: 700, padding: "2px 8px", borderRadius: "999px", background: "rgba(245,158,11,0.2)", color: "#f59e0b", border: "1px solid rgba(245,158,11,0.4)" }}>
+              BYOA • CUSTOMER-OWNED
+            </span>
+            <h3 style={{ margin: 0, color: "#ffffff", fontSize: "1rem", fontWeight: 700 }}>AWS Cloud Connection Center</h3>
+          </div>
+          <p style={{ margin: 0, color: "#94a3b8", fontSize: "0.85rem" }}>Connect your dedicated AWS account (Role Only or Full Infrastructure). Zero shared infrastructure, scale-to-zero compute ($0 idle), and ephemeral STS delegation.</p>
+        </div>
+        {onNavigateToAwsConnection && (
+          <button
+            className="button button-primary"
+            onClick={onNavigateToAwsConnection}
+            type="button"
+            style={{ background: "linear-gradient(135deg, #d97706, #f59e0b)", borderColor: "#b45309", whiteSpace: "nowrap" }}
+          >
+            Open AWS Connection Center ↗
+          </button>
+        )}
+      </div>
 
       <div style={{ marginBottom: "20px", padding: "16px", borderRadius: "12px", background: "linear-gradient(135deg, rgba(14,165,233,0.15), rgba(220,38,38,0.15))", border: "1px solid rgba(14,165,233,0.3)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <div>
