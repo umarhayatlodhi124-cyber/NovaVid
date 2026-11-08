@@ -192,6 +192,68 @@ const URDU_PAGE_TITLES: Record<string, string> = {
   settings: "سیٹنگز",
 };
 
+const ROMAN_URDU_NAV_LABELS: Record<string, string> = {
+  Overview: "Dashboard / Jaiza",
+  "Daily Automation": "Rozana Automation",
+  "AWS Cloud Connection": "AWS Cloud Connection",
+  "Google & YouTube": "Google & YouTube Center",
+  "AI Face Presenter": "AI Face Presenter & Avatar",
+  "Thumbnail Studio": "Thumbnail Studio",
+  "Quality Control (QC)": "Quality Control & Check",
+  "AI Agent (Auto)": "AI Agent (Khuddar)",
+  "Creator Workspace": "Creator Workspace",
+  Projects: "Tamam Projects",
+  "Media library": "Media Library",
+  "AI Providers": "AI Models & Keys",
+  "AI Research": "AI Research Studio",
+  "Script Studio": "Script Studio",
+  Storyboard: "Storyboard Studio",
+  "Visual Studio": "Visual Studio",
+  "Voice / TTS": "Voiceover / Awaaz",
+  Subtitles: "Subtitles & Captions",
+  "Audio & Music": "Background Music & Audio",
+  "Timeline Editor": "Timeline Editor",
+  "Video Export": "Video Export (MP4)",
+  "YouTube SEO": "YouTube SEO",
+  Publishing: "YouTube Publishing",
+  Analytics: "Analytics & Karkardagi",
+  "Plans & Licensing": "Plans & Licensing",
+  "Customer SaaS": "Customer Portal",
+  "Admin SaaS": "Admin Portal",
+  Settings: "Settings",
+};
+
+const ROMAN_URDU_PAGE_TITLES: Record<string, string> = {
+  dashboard: "Dashboard aur Jaiza",
+  automation: "Rozana Multi-Niche Automation",
+  avatar: "AI Face Presenter aur Avatar Studio",
+  thumbnails: "1280x720 Thumbnail Studio",
+  quality_control: "Quality Control aur Preflight Audit",
+  agent: "YouTube AI Automation Agent",
+  creator: "Creator Workspace aur Channels",
+  google_youtube: "Google aur YouTube Center",
+  aws_cloud: "AWS Cloud Computing (BYOA)",
+  projects: "Meray Projects",
+  media: "Media Library",
+  providers: "AI Models aur Providers",
+  research: "AI Research Studio",
+  scripts: "Script Studio",
+  storyboard: "Storyboard Studio",
+  visuals: "Visual Studio",
+  voice: "Voiceover Studio",
+  subtitles: "Subtitles Studio",
+  audio: "Audio aur Music Studio",
+  timeline: "Timeline Editor",
+  export: "Video Export aur Render",
+  seo: "YouTube SEO Optimization",
+  publish: "YouTube Publishing Studio",
+  analytics: "Analytics aur Karkardagi",
+  license: "Licensing aur Plans",
+  customer_saas: "Customer Portal",
+  admin_saas: "Admin SaaS Portal",
+  settings: "Settings",
+};
+
 export const navigation = [
   { label: "Overview", view: "dashboard" as const, icon: "grid" },
   { label: "Daily Automation", view: "automation" as const, icon: "spark" },
@@ -296,10 +358,10 @@ function App() {
     return "beginner";
   });
 
-  const [uiLanguage, setUiLanguage] = useState<"en" | "ur">(() => {
+  const [uiLanguage, setUiLanguage] = useState<"en" | "ur" | "roman_ur">(() => {
     try {
       const saved = localStorage.getItem("novavid_ui_lang");
-      if (saved === "en" || saved === "ur") return saved;
+      if (saved === "en" || saved === "ur" || saved === "roman_ur") return saved;
     } catch {}
     return "en";
   });
@@ -346,7 +408,11 @@ function App() {
   };
 
   const handleToggleUiLanguage = () => {
-    setUiLanguage((prev) => (prev === "en" ? "ur" : "en"));
+    setUiLanguage((prev) => {
+      if (prev === "en") return "ur";
+      if (prev === "ur") return "roman_ur";
+      return "en";
+    });
   };
 
   useEffect(() => {
@@ -663,6 +729,8 @@ function App() {
 
   const pageTitle = uiLanguage === "ur"
     ? (URDU_PAGE_TITLES[view] || englishPageTitle)
+    : uiLanguage === "roman_ur"
+    ? (ROMAN_URDU_PAGE_TITLES[view] || englishPageTitle)
     : englishPageTitle;
 
   const filteredNavigation = useMemo(() => getFilteredNavigation(userMode), [userMode]);
@@ -789,7 +857,12 @@ function App() {
             </span>
           </span>
           {filteredNavigation.map((item) => {
-            const labelText = uiLanguage === "ur" ? (URDU_NAV_LABELS[item.label] || item.label) : item.label;
+            const labelText =
+              uiLanguage === "ur"
+                ? (URDU_NAV_LABELS[item.label] || item.label)
+                : uiLanguage === "roman_ur"
+                ? (ROMAN_URDU_NAV_LABELS[item.label] || item.label)
+                : item.label;
             return (
               <button
                 className={`nav-item ${view === item.view ? "active" : ""}`}
@@ -892,15 +965,15 @@ function App() {
               </span>
             </button>
 
-            {/* Language Switcher */}
+            {/* Language Switcher (English / Urdu / Roman Urdu) */}
             <button
               className="lang-toggle-btn"
               onClick={handleToggleUiLanguage}
-              title="Toggle Interface Language / اردو میں تبدیل کریں"
+              title="Toggle Interface Language: English / اردو / Roman Urdu"
               type="button"
             >
               <span>🌐</span>
-              <span>{uiLanguage === "ur" ? "English" : "اردو"}</span>
+              <span>{uiLanguage === "en" ? "اردو" : uiLanguage === "ur" ? "Roman Urdu" : "English"}</span>
             </button>
 
             <button
