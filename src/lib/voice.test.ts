@@ -16,6 +16,10 @@ describe("voice studio module", () => {
     expect(geminiVoices.some((v) => v.id === "Kore")).toBe(true);
     expect(geminiVoices.some((v) => v.id === "Puck")).toBe(true);
     expect(nativeVoices.some((v) => v.id.includes("David"))).toBe(true);
+
+    const elevenVoices = FALLBACK_VOICES.filter((v) => v.provider === "elevenlabs");
+    expect(elevenVoices.length).toBeGreaterThanOrEqual(3);
+    expect(elevenVoices.some((v) => v.name.includes("Rachel"))).toBe(true);
   });
 
   it("calculates cost estimate with billing requirement for Gemini vs zero cost for Native", async () => {

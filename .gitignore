@@ -33,6 +33,10 @@ backups/
 # Firebase cache
 .firebase/
 
+# Local test renders & video artifacts
+test_renders/
+*.mp4
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

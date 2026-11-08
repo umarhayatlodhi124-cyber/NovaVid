@@ -1,10 +1,12 @@
 import { invoke } from "@tauri-apps/api/core";
 import type { StoryboardScene } from "./storyboard";
 
+export type VoiceProvider = "gemini" | "native" | "elevenlabs";
+
 export interface VoiceOption {
   id: string;
   name: string;
-  provider: "gemini" | "native";
+  provider: VoiceProvider;
   gender: string;
   language: string;
   description: string;
@@ -105,7 +107,73 @@ export const FALLBACK_VOICES: VoiceOption[] = [
     language: "English (US)",
     description: "Clear offline Windows system narrator. Zero latency and zero API cost.",
   },
+  {
+    id: "21m00Tcm4TlvDq8ikWAM",
+    name: "Rachel (ElevenLabs)",
+    provider: "elevenlabs",
+    gender: "Female",
+    language: "English / Multilingual",
+    description: "Calm, professional, natural narrative voice from ElevenLabs.",
+  },
+  {
+    id: "pNInz6obpgDQGcFmaJgB",
+    name: "Adam (ElevenLabs)",
+    provider: "elevenlabs",
+    gender: "Male",
+    language: "English / Multilingual",
+    description: "Deep, narrative, engaging American voice from ElevenLabs.",
+  },
+  {
+    id: "ErXwobaYiN019PkySvjV",
+    name: "Antoni (ElevenLabs)",
+    provider: "elevenlabs",
+    gender: "Male",
+    language: "English / Multilingual",
+    description: "Warm, energetic, storyteller voice from ElevenLabs.",
+  },
 ];
+
+export async function testElevenLabsConnection(apiKey?: string): Promise<{ connected: boolean; message: string }> {
+  if (!apiKey || !apiKey.trim()) {
+    return {
+      connected: false,
+      message: "ElevenLabs API key is not configured. Please save your API key in Settings > API Connections.",
+    };
+  }
+
+  try {
+    const res = await fetch("https://api.elevenlabs.io/v1/user", {
+      headers: {
+        "xi-api-key": apiKey.trim(),
+      },
+    });
+
+    if (res.status === 401 || res.status === 403) {
+      return {
+        connected: false,
+        message: "Invalid ElevenLabs API key. Please check your credentials in the ElevenLabs dashboard.",
+      };
+    }
+
+    if (!res.ok) {
+      return {
+        connected: false,
+        message: `ElevenLabs returned HTTP ${res.status}.`,
+      };
+    }
+
+    return {
+      connected: true,
+      message: "Successfully connected to ElevenLabs API.",
+    };
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return {
+      connected: false,
+      message: `Failed to connect to ElevenLabs: ${msg}`,
+    };
+  }
+}
 
 export async function fetchAvailableVoices(): Promise<VoiceOption[]> {
   try {
