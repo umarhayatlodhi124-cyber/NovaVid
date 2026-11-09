@@ -45,9 +45,15 @@ describe("Resource Manager & 8GB RAM Protection", () => {
 
   it("recommends low_resource mode when physical RAM is 8GB or less", () => {
     const metrics: SystemResourceMetrics = {
+      totalRamMb: 7987,
+      availableRamMb: 1420,
+      usedRamMb: 6567,
       totalPhysicalRamMb: 7987,
       availablePhysicalRamMb: 1420,
       memoryLoadPercent: 82,
+      isLowRamDevice: true,
+      isMemoryCritical: false,
+      recommendedMode: "low_resource",
       cpuCoreCount: 4,
       lowResourceRecommended: true,
       systemStatus: "Operating at 82% memory load.",
@@ -58,9 +64,15 @@ describe("Resource Manager & 8GB RAM Protection", () => {
 
   it("recommends low_resource mode when memory load is 80% or higher regardless of RAM", () => {
     const metrics: SystemResourceMetrics = {
+      totalRamMb: 16384,
+      availableRamMb: 1200,
+      usedRamMb: 15184,
       totalPhysicalRamMb: 16384,
       availablePhysicalRamMb: 1200,
       memoryLoadPercent: 88,
+      isLowRamDevice: false,
+      isMemoryCritical: true,
+      recommendedMode: "low_resource",
       cpuCoreCount: 8,
       lowResourceRecommended: true,
       systemStatus: "High load.",
@@ -71,9 +83,15 @@ describe("Resource Manager & 8GB RAM Protection", () => {
 
   it("recommends balanced mode for 16GB machines with healthy headroom", () => {
     const metrics: SystemResourceMetrics = {
+      totalRamMb: 16384,
+      availableRamMb: 8192,
+      usedRamMb: 8192,
       totalPhysicalRamMb: 16384,
       availablePhysicalRamMb: 8192,
       memoryLoadPercent: 50,
+      isLowRamDevice: false,
+      isMemoryCritical: false,
+      recommendedMode: "balanced",
       cpuCoreCount: 8,
       lowResourceRecommended: false,
       systemStatus: "Healthy",

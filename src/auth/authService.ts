@@ -101,16 +101,22 @@ export async function loginWithGoogleAuth(): Promise<{ user: User; profile: User
   provider.setCustomParameters({ prompt: "select_account" });
 
   if (isTauriEnvironment()) {
-    // In Tauri Windows Desktop: attempt popup or fallback gracefully
-    const cred = await signInWithPopup(auth, provider);
-    const profile = await syncUserProfile(cred.user);
-    return { user: cred.user, profile };
-  } else {
-    // Standard Browser
-    const cred = await signInWithPopup(auth, provider);
-    const profile = await syncUserProfile(cred.user);
-    return { user: cred.user, profile };
+    // Tauri desktop WebView cannot host OAuth popups — the WebView2 runtime
+    // blocks cross-origin popup windows required by Firebase's signInWithPopup.
+    // Throw a clear, actionable message so the UI can guide the user.
+    throw Object.assign(
+      new Error(
+        "Google Sign-In is not available in the desktop app. Please sign in with your Email & Password above. " +
+        "To use Google Sign-In, open https://novavid-ecfc8.web.app in your browser."
+      ),
+      { code: "auth/operation-not-supported-in-this-environment" }
+    );
   }
+
+  // Standard browser — signInWithPopup works normally
+  const cred = await signInWithPopup(auth, provider);
+  const profile = await syncUserProfile(cred.user);
+  return { user: cred.user, profile };
 }
 
 export async function logoutAuth(): Promise<void> {

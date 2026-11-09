@@ -53,14 +53,28 @@ export const firebaseConfig = {
 export const app: FirebaseApp =
   getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
 
+// Detect standard web browser environment (not Tauri desktop, not Node/Vitest test runner)
+function isRealBrowser(): boolean {
+  return (
+    typeof window !== "undefined" &&
+    typeof window.document !== "undefined" &&
+    typeof window.location !== "undefined" &&
+    window.location.protocol.startsWith("http") &&
+    !Boolean((window as any).__TAURI_INTERNALS__ || (window as any).__TAURI__)
+  );
+}
+
 // 2. Export core initialized services with resilient multi-layer desktop & web persistence
 function initializeFirebaseAuth(): Auth {
   try {
+    const isBrowser = isRealBrowser();
     return initializeAuth(app, {
-      persistence: typeof window !== "undefined"
+      persistence: isBrowser
         ? [browserLocalPersistence, indexedDBLocalPersistence, inMemoryPersistence]
-        : inMemoryPersistence,
-      popupRedirectResolver: typeof window !== "undefined" ? browserPopupRedirectResolver : undefined,
+        : [indexedDBLocalPersistence, inMemoryPersistence],
+      // Only pass browserPopupRedirectResolver in real browser environments
+      // Avoid in Tauri WebView2 and Node.js/Vitest test runners
+      popupRedirectResolver: isBrowser ? browserPopupRedirectResolver : undefined,
     });
   } catch {
     return getAuth(app);

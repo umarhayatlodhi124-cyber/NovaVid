@@ -111,6 +111,8 @@ import { CloudAuthModal } from "./components/CloudAuthModal";
 import { MultiNicheAutomationPanel } from "./components/MultiNicheAutomationPanel";
 import { AvatarStudioPage } from "./components/AvatarStudioPage";
 import { ThumbnailStudioPage } from "./components/ThumbnailStudioPage";
+import { YouTubeIntelligencePage } from "./components/YouTubeIntelligencePage";
+import { ContentPlannerPage } from "./components/ContentPlannerPage";
 import { QualityControlPage } from "./components/QualityControlPage";
 import { OnboardingWizardModal } from "./components/OnboardingWizardModal";
 import { AIProviderCenter } from "./components/AIProviderCenter";
@@ -125,7 +127,7 @@ import {
 } from "./lib/resourceManager";
 import "./App.css";
 
-type View = "dashboard" | "automation" | "avatar" | "thumbnails" | "quality_control" | "agent" | "creator" | "projects" | "media" | "settings" | "providers" | "google_youtube" | "aws_cloud" | "research" | "scripts" | "storyboard" | "visuals" | "voice" | "subtitles" | "audio" | "timeline" | "export" | "seo" | "publish" | "analytics" | "license" | "customer_saas" | "admin_saas";
+type View = "dashboard" | "automation" | "avatar" | "thumbnails" | "youtube_intelligence" | "content_planner" | "quality_control" | "agent" | "creator" | "projects" | "media" | "settings" | "providers" | "google_youtube" | "aws_cloud" | "research" | "scripts" | "storyboard" | "visuals" | "voice" | "subtitles" | "audio" | "timeline" | "export" | "seo" | "publish" | "analytics" | "license" | "customer_saas" | "admin_saas";
 type StorageState = "connecting" | "ready" | "error";
 export type UserMode = "beginner" | "creator" | "advanced";
 
@@ -166,6 +168,8 @@ const URDU_PAGE_TITLES: Record<string, string> = {
   automation: "خودکار روزانہ ملٹی نیش مواد",
   avatar: "اے آئی فیس پریزنٹر اور اوتار اسٹوڈیو",
   thumbnails: "خودکار 1280x720 تھمب نیل اسٹوڈیو",
+  youtube_intelligence: "یوٹیوب انٹیلیجنس اور ریسرچ",
+  content_planner: "خودکار کنٹنٹ کیلنڈر اور پلانر",
   quality_control: "کوالٹی کنٹرول و پری فلائٹ آڈٹ",
   agent: "خودکار یوٹیوب اے آئی ایجنٹ",
   creator: "تخلیقی ورک اسپیس اور چینلز",
@@ -228,6 +232,8 @@ const ROMAN_URDU_PAGE_TITLES: Record<string, string> = {
   automation: "Rozana Multi-Niche Automation",
   avatar: "AI Face Presenter aur Avatar Studio",
   thumbnails: "1280x720 Thumbnail Studio",
+  youtube_intelligence: "YouTube Intelligence aur Research",
+  content_planner: "Content Strategy aur Calendar Planner",
   quality_control: "Quality Control aur Preflight Audit",
   agent: "YouTube AI Automation Agent",
   creator: "Creator Workspace aur Channels",
@@ -261,6 +267,8 @@ export const navigation = [
   { label: "Google & YouTube", view: "google_youtube" as const, icon: "spark" },
   { label: "AI Face Presenter", view: "avatar" as const, icon: "video" },
   { label: "Thumbnail Studio", view: "thumbnails" as const, icon: "image" },
+  { label: "YouTube Intelligence", view: "youtube_intelligence" as const, icon: "trend" },
+  { label: "Content Planner", view: "content_planner" as const, icon: "script" },
   { label: "Quality Control (QC)", view: "quality_control" as const, icon: "shield" },
   { label: "AI Agent (Auto)", view: "agent" as const, icon: "spark" },
   { label: "Creator Workspace", view: "creator" as const, icon: "spark" },
@@ -683,6 +691,10 @@ function App() {
         ? "AI Face Presenter & Avatar Studio"
       : view === "thumbnails"
         ? "Automated 1280x720 Thumbnail Studio"
+      : view === "youtube_intelligence"
+        ? "Global YouTube Intelligence Engine"
+      : view === "content_planner"
+        ? "Autonomous Content Strategy Planner"
       : view === "quality_control"
         ? "Quality Control & Preflight Inspector"
       : view === "agent"
@@ -960,7 +972,12 @@ function App() {
             >
               <span className="resource-dot"></span>
               <span>
-                ⚡ {resourceMetrics ? `${(resourceMetrics.availablePhysicalRamMb / 1024).toFixed(1)}GB Free` : "Safe RAM"}
+                ⚡ {(() => {
+                  const freeMb = resourceMetrics?.availableRamMb ?? resourceMetrics?.availablePhysicalRamMb;
+                  return typeof freeMb === "number" && !isNaN(freeMb)
+                    ? `${(freeMb / 1024).toFixed(1)}GB Free`
+                    : "Safe RAM";
+                })()}
                 {" "}({resourceMode === "low_resource" ? (uiLanguage === "ur" ? "۸ جی بی محفوظ" : "8GB Safe") : resourceMode})
               </span>
             </button>
@@ -1222,7 +1239,29 @@ function App() {
           ) : view === "avatar" ? (
             <AvatarStudioPage currentUserId={firebaseUser?.uid || "owner_lodhi_techx"} isOwner={true} />
           ) : view === "thumbnails" ? (
-            <ThumbnailStudioPage currentUserId={firebaseUser?.uid || "owner_lodhi_techx"} />
+            <ThumbnailStudioPage
+              currentUserId={firebaseUser?.uid || "owner_lodhi_techx"}
+              activeProject={selectedProject ? {
+                id: selectedProject.id,
+                name: selectedProject.name,
+                topic: selectedProject.topic,
+                language: selectedProject.language,
+              } : null}
+            />
+          ) : view === "youtube_intelligence" ? (
+            <YouTubeIntelligencePage
+              onSelectTopic={(topic) => {
+                saveProject({
+                  name: topic.title,
+                  topic: topic.title,
+                  language: topic.recommendedLanguage === "Urdu" ? "ur" : "en",
+                }, null).then(() => {
+                  setView("agent");
+                }).catch(() => undefined);
+              }}
+            />
+          ) : view === "content_planner" ? (
+            <ContentPlannerPage />
           ) : view === "quality_control" ? (
             <QualityControlPage projectId={selectedProjectId || "taleemi_duniya_pro_01"} />
           ) : view === "agent" ? (

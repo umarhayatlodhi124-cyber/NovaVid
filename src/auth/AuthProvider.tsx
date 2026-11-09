@@ -139,7 +139,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (err?.code === "auth/popup-closed-by-user") {
         msg = "Sign in window was closed. Please try again.";
       } else if (err?.code === "auth/popup-blocked") {
-        msg = "Sign in popup was blocked. Please allow popups or reset your password to sign in with email.";
+        msg = "Sign in popup was blocked. Please allow popups or use email/password sign in.";
+      } else if (
+        err?.code === "auth/operation-not-supported-in-this-environment" ||
+        err?.code === "auth/argument-error" ||
+        (msg && msg.includes("not available in the desktop app"))
+      ) {
+        msg =
+          "Google Sign-In is not supported in the desktop app. Please sign in with your Email & Password above. " +
+          "To use Google Sign-In, visit https://novavid-ecfc8.web.app in your browser.";
       }
       setError(msg);
       throw new Error(msg);

@@ -4,9 +4,14 @@
 import React, { useState } from "react";
 import { useAuth } from "./AuthContext";
 
+// Detect Tauri desktop WebView
+const isDesktop =
+  typeof window !== "undefined" &&
+  Boolean((window as any).__TAURI_INTERNALS__ || (window as any).__TAURI__);
+
 export const LoginPage: React.FC = () => {
   const { login, loginWithGoogle, setAuthView, error, clearError } = useAuth();
-  const [email, setEmail] = useState("you@lodhitechx.com");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [localError, setLocalError] = useState<string | null>(null);
@@ -31,13 +36,6 @@ export const LoginPage: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleAutoFill = () => {
-    setEmail("you@lodhitechx.com");
-    setPassword("TestPassword123!");
-    setLocalError(null);
-    clearError();
   };
 
   const handleGoogleLogin = async () => {
@@ -212,23 +210,6 @@ export const LoginPage: React.FC = () => {
             {loading ? "Authenticating..." : "Sign In to Workspace"}
           </button>
 
-          <button
-            type="button"
-            onClick={handleAutoFill}
-            style={{
-              background: "rgba(59, 130, 246, 0.08)",
-              border: "1px dashed rgba(59, 130, 246, 0.4)",
-              borderRadius: "8px",
-              padding: "8px 12px",
-              color: "#93c5fd",
-              fontSize: "0.78rem",
-              fontWeight: 600,
-              cursor: "pointer",
-              transition: "all 0.2s",
-            }}
-          >
-            🔑 One-Click Fill: you@lodhitechx.com
-          </button>
         </form>
 
         <div style={{ position: "relative", textAlign: "center", margin: "24px 0" }}>
@@ -271,7 +252,7 @@ export const LoginPage: React.FC = () => {
             marginBottom: "16px",
           }}
         >
-          <span>🌐</span> Sign in with Google
+          <span>🌐</span> {isDesktop ? "Sign in with Google (Web Only)" : "Sign in with Google"}
         </button>
 
         <div style={{ textAlign: "center", fontSize: "0.85rem", color: "#9ca3af" }}>
