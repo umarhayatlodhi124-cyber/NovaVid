@@ -1,6 +1,6 @@
 [package]
 name = "ai-youtube-studio"
-version = "2.1.0"
+version = "2.2.0"
 description = "NovaVid AI YouTube Studio by LODHI TECHX"
 authors = ["LODHI TECHX"]
 edition = "2024"
@@ -41,3 +41,4 @@ lto = true
 opt-level = 3
 panic = "abort"
 strip = true
+

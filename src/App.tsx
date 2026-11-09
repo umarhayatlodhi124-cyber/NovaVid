@@ -113,6 +113,11 @@ import { AvatarStudioPage } from "./components/AvatarStudioPage";
 import { ThumbnailStudioPage } from "./components/ThumbnailStudioPage";
 import { YouTubeIntelligencePage } from "./components/YouTubeIntelligencePage";
 import { ContentPlannerPage } from "./components/ContentPlannerPage";
+import { AutoShortsCutterPage } from "./components/AutoShortsCutterPage";
+import { RetentionBoosterPage } from "./components/RetentionBoosterPage";
+import { ABTestingStudioPage } from "./components/ABTestingStudioPage";
+import { VoiceClonerPage } from "./components/VoiceClonerPage";
+import { AutopilotDaemonPage } from "./components/AutopilotDaemonPage";
 import { QualityControlPage } from "./components/QualityControlPage";
 import { OnboardingWizardModal } from "./components/OnboardingWizardModal";
 import { AIProviderCenter } from "./components/AIProviderCenter";
@@ -127,7 +132,7 @@ import {
 } from "./lib/resourceManager";
 import "./App.css";
 
-type View = "dashboard" | "automation" | "avatar" | "thumbnails" | "youtube_intelligence" | "content_planner" | "quality_control" | "agent" | "creator" | "projects" | "media" | "settings" | "providers" | "google_youtube" | "aws_cloud" | "research" | "scripts" | "storyboard" | "visuals" | "voice" | "subtitles" | "audio" | "timeline" | "export" | "seo" | "publish" | "analytics" | "license" | "customer_saas" | "admin_saas";
+type View = "dashboard" | "automation" | "autopilot_daemon" | "auto_shorts" | "retention_booster" | "ab_testing" | "voice_cloner" | "avatar" | "thumbnails" | "youtube_intelligence" | "content_planner" | "quality_control" | "agent" | "creator" | "projects" | "media" | "settings" | "providers" | "google_youtube" | "aws_cloud" | "research" | "scripts" | "storyboard" | "visuals" | "voice" | "subtitles" | "audio" | "timeline" | "export" | "seo" | "publish" | "analytics" | "license" | "customer_saas" | "admin_saas";
 type StorageState = "connecting" | "ready" | "error";
 export type UserMode = "beginner" | "creator" | "advanced";
 
@@ -166,6 +171,11 @@ const URDU_NAV_LABELS: Record<string, string> = {
 const URDU_PAGE_TITLES: Record<string, string> = {
   dashboard: "ڈیش بورڈ اور جائزہ",
   automation: "خودکار روزانہ ملٹی نیش مواد",
+  autopilot_daemon: "آٹو پائلٹ بیک گراؤنڈ ڈیمن",
+  auto_shorts: "وائرل شارٹس آٹو کٹر",
+  retention_booster: "ریٹینشن بوسٹر و اسکرپٹ ہیٹ میپ",
+  ab_testing: "اے/بی ٹیسٹنگ و سی ٹی آر پریڈکشن",
+  voice_cloner: "پرسنل وائس کلونر اسٹوڈیو",
   avatar: "اے آئی فیس پریزنٹر اور اوتار اسٹوڈیو",
   thumbnails: "خودکار 1280x720 تھمب نیل اسٹوڈیو",
   youtube_intelligence: "یوٹیوب انٹیلیجنس اور ریسرچ",
@@ -234,6 +244,11 @@ const ROMAN_URDU_PAGE_TITLES: Record<string, string> = {
   thumbnails: "1280x720 Thumbnail Studio",
   youtube_intelligence: "YouTube Intelligence aur Research",
   content_planner: "Content Strategy aur Calendar Planner",
+  autopilot_daemon: "Auto-Pilot Daemon — Khuddar Publishing",
+  auto_shorts: "Viral Shorts Auto Cutter",
+  retention_booster: "Retention Booster aur Script Heatmap",
+  ab_testing: "A/B Testing Studio aur CTR Prediction",
+  voice_cloner: "Custom Creator Voice Cloner",
   quality_control: "Quality Control aur Preflight Audit",
   agent: "YouTube AI Automation Agent",
   creator: "Creator Workspace aur Channels",
@@ -269,6 +284,11 @@ export const navigation = [
   { label: "Thumbnail Studio", view: "thumbnails" as const, icon: "image" },
   { label: "YouTube Intelligence", view: "youtube_intelligence" as const, icon: "trend" },
   { label: "Content Planner", view: "content_planner" as const, icon: "script" },
+  { label: "🤖 Auto-Pilot Daemon", view: "autopilot_daemon" as const, icon: "spark" },
+  { label: "✂️ Auto Shorts Cutter", view: "auto_shorts" as const, icon: "film" },
+  { label: "📈 Retention Booster", view: "retention_booster" as const, icon: "trend" },
+  { label: "🎯 A/B Testing Studio", view: "ab_testing" as const, icon: "image" },
+  { label: "🎙️ Voice Cloner", view: "voice_cloner" as const, icon: "mic" },
   { label: "Quality Control (QC)", view: "quality_control" as const, icon: "shield" },
   { label: "AI Agent (Auto)", view: "agent" as const, icon: "spark" },
   { label: "Creator Workspace", view: "creator" as const, icon: "spark" },
@@ -695,6 +715,16 @@ function App() {
         ? "Global YouTube Intelligence Engine"
       : view === "content_planner"
         ? "Autonomous Content Strategy Planner"
+      : view === "autopilot_daemon"
+        ? "Autonomous Auto-Pilot Background Daemon"
+      : view === "auto_shorts"
+        ? "Auto Shorts Cutter & Viral Repurposer"
+      : view === "retention_booster"
+        ? "Retention Heatmap & Script Hook Booster"
+      : view === "ab_testing"
+        ? "A/B Thumbnail & Title CTR Prediction Studio"
+      : view === "voice_cloner"
+        ? "Custom Creator Voice Cloner"
       : view === "quality_control"
         ? "Quality Control & Preflight Inspector"
       : view === "agent"
@@ -1262,6 +1292,18 @@ function App() {
             />
           ) : view === "content_planner" ? (
             <ContentPlannerPage />
+          ) : view === "autopilot_daemon" ? (
+            <AutopilotDaemonPage />
+          ) : view === "auto_shorts" ? (
+            <AutoShortsCutterPage
+              activeProjectTopic={selectedProject?.topic || "Your Video Topic"}
+            />
+          ) : view === "retention_booster" ? (
+            <RetentionBoosterPage />
+          ) : view === "ab_testing" ? (
+            <ABTestingStudioPage />
+          ) : view === "voice_cloner" ? (
+            <VoiceClonerPage />
           ) : view === "quality_control" ? (
             <QualityControlPage projectId={selectedProjectId || "taleemi_duniya_pro_01"} />
           ) : view === "agent" ? (
