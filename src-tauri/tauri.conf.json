@@ -1,7 +1,7 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "NovaVid AI Studio",
-  "version": "0.2.0",
+  "version": "2.1.0",
   "identifier": "com.aiyoutubestudio.app",
   "build": {
     "beforeDevCommand": "npm run dev",
@@ -20,7 +20,7 @@
       }
     ],
     "security": {
-      "csp": "default-src 'self'; img-src 'self' asset: http://asset.localhost data: blob: https:; media-src 'self' asset: http://asset.localhost blob:; style-src 'self' 'unsafe-inline'; font-src 'self'; connect-src ipc: http://ipc.localhost https://*.firebaseio.com https://*.googleapis.com https://*.firebaseapp.com https://*.workers.dev https://*.cloudfunctions.net https://api.anthropic.com https://api.elevenlabs.io"
+      "csp": "default-src 'self'; img-src 'self' asset: http://asset.localhost data: blob: https:; media-src 'self' asset: http://asset.localhost blob:; style-src 'self' 'unsafe-inline'; font-src 'self'; script-src 'self' 'unsafe-inline' https://apis.google.com https://www.gstatic.com; frame-src 'self' https://novavid-ecfc8.firebaseapp.com https://*.firebaseapp.com https://accounts.google.com; connect-src ipc: http://ipc.localhost https://*.firebaseio.com https://*.googleapis.com https://*.firebaseapp.com https://*.firebase.com https://*.google.com https://accounts.google.com https://apis.google.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://*.workers.dev https://*.cloudfunctions.net https://api.anthropic.com https://api.elevenlabs.io"
     }
   },
   "bundle": {

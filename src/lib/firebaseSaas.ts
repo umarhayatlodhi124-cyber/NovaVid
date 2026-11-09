@@ -234,7 +234,7 @@ export class FirebaseSaaSService {
     }
 
     const project: SaaSProject = {
-      id: `proj-saas-${Date.now()}`,
+      id: `proj-saas-${Date.now()}-${++this.uidCounter}`,
       userId: this.currentUser.uid,
       orgId: this.currentUser.organizationId,
       name: input.name,

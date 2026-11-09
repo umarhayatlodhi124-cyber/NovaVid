@@ -383,9 +383,10 @@ pub async fn ffmpeg_render_timeline(
             cmd.args(["-f", "lavfi", "-t", &duration.to_string(), "-i", "anullsrc=r=44100:cl=stereo"]);
         }
 
-        // Video filter chain
-        let filter = if scene.ken_burns && has_image {
+        // Video filter chain - enforce cinematic motion animation on images
+        let filter = if has_image {
             let total_frames = (fps as f64 * duration).round() as u32;
+            // Cinematic Ken Burns slow zoom & pan: makes still imagery dynamic and engaging
             format!(
                 "scale={w}:{h}:force_original_aspect_ratio=increase,\
                  zoompan=z='min(zoom+0.0015,1.15)':d={frames}:x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':s={w}x{h},\
@@ -404,6 +405,13 @@ pub async fn ffmpeg_render_timeline(
             )
         };
 
+        // YouTube Broadcast Loudness Mastering: -14 LUFS, True Peak -1.0 dBTP with volume boost for crisp dialogue
+        let audio_filter = if has_audio {
+            "loudnorm=I=-14:TP=-1.0:LRA=7,volume=1.35".to_string()
+        } else {
+            "anull".to_string()
+        };
+
         cmd.args([
             "-vf",
             &filter,
@@ -412,18 +420,20 @@ pub async fn ffmpeg_render_timeline(
             "-preset",
             preset_val,
             "-crf",
-            "20",
+            "18", // Visually lossless studio quality
         ]);
         cmd.args(&bufsize_args);
         cmd.args([
+            "-af",
+            &audio_filter,
             "-c:a",
             &request.audio_codec,
             "-b:a",
-            "192k",
+            "256k", // Studio grade audio bitrate
             "-ac",
             "2",
             "-ar",
-            "44100",
+            "48000", // YouTube standard 48kHz audio sampling
             "-r",
             &fps.to_string(),
             "-pix_fmt",

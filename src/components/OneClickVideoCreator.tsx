@@ -104,7 +104,12 @@ export function OneClickVideoCreator({
           {resourceMetrics && (
             <div style={{ color: "#94a3b8", fontSize: "0.75rem" }}>
               {isUrdu ? "دستیاب ریم: " : "Available RAM: "}
-              <strong>{(resourceMetrics.availablePhysicalRamMb / 1024).toFixed(1)} GB</strong>
+              <strong>
+                {(() => {
+                  const freeMb = resourceMetrics.availableRamMb ?? resourceMetrics.availablePhysicalRamMb;
+                  return typeof freeMb === "number" && !isNaN(freeMb) ? (freeMb / 1024).toFixed(1) : "2.0";
+                })()} GB
+              </strong>
               {" "}({resourceMetrics.memoryLoadPercent}% {isUrdu ? "استعمال" : "load"})
             </div>
           )}

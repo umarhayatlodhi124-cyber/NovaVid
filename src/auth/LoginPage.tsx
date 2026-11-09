@@ -4,6 +4,11 @@
 import React, { useState } from "react";
 import { useAuth } from "./AuthContext";
 
+// Detect Tauri desktop WebView
+const isDesktop =
+  typeof window !== "undefined" &&
+  Boolean((window as any).__TAURI_INTERNALS__ || (window as any).__TAURI__);
+
 export const LoginPage: React.FC = () => {
   const { login, loginWithGoogle, setAuthView, error, clearError } = useAuth();
   const [email, setEmail] = useState("");
@@ -15,9 +20,17 @@ export const LoginPage: React.FC = () => {
     e.preventDefault();
     setLocalError(null);
     clearError();
+    if (!email.trim()) {
+      setLocalError("Please enter your email address.");
+      return;
+    }
+    if (!password) {
+      setLocalError("Please enter your password.");
+      return;
+    }
     setLoading(true);
     try {
-      await login(email, password);
+      await login(email.trim(), password);
     } catch (err: any) {
       setLocalError(err?.message || "Failed to sign in");
     } finally {
@@ -196,6 +209,7 @@ export const LoginPage: React.FC = () => {
           >
             {loading ? "Authenticating..." : "Sign In to Workspace"}
           </button>
+
         </form>
 
         <div style={{ position: "relative", textAlign: "center", margin: "24px 0" }}>
@@ -235,10 +249,10 @@ export const LoginPage: React.FC = () => {
             alignItems: "center",
             justifyContent: "center",
             gap: "10px",
-            marginBottom: "20px",
+            marginBottom: "16px",
           }}
         >
-          <span>🌐</span> Sign in with Google
+          <span>🌐</span> {isDesktop ? "Sign in with Google (Web Only)" : "Sign in with Google"}
         </button>
 
         <div style={{ textAlign: "center", fontSize: "0.85rem", color: "#9ca3af" }}>
