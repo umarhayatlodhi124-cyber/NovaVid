@@ -8,12 +8,25 @@ import {
   LicenseTier,
 } from "../lib/licensingStudio";
 import { LicensingRepository } from "../lib/repositories";
+import { useAuth } from "../auth/AuthContext";
+
+// Map Firebase plan names → LicenseTier
+const PLAN_TO_TIER: Record<string, LicenseTier> = {
+  enterprise: "enterprise",
+  creator_pro: "creator",
+  agency_studio: "pro_studio",
+  pro_studio: "pro_studio",
+  creator: "creator",
+  free: "free",
+  starter: "free",
+};
 
 interface LicensingStudioPageProps {
   onPlanChanged?: (tier: LicenseTier) => void;
 }
 
 export function LicensingStudioPage({ onPlanChanged }: LicensingStudioPageProps) {
+  const { profile, isOwner } = useAuth();
   const [currentLicense, setCurrentLicense] = useState<UserLicense>(DEFAULT_FREE_LICENSE);
   const [inputKey, setInputKey] = useState("");
   const [holderEmail, setHolderEmail] = useState("");
@@ -25,11 +38,73 @@ export function LicensingStudioPage({ onPlanChanged }: LicensingStudioPageProps)
     let isMounted = true;
     async function loadLicense() {
       try {
+        // Priority 1: If owner email, force enterprise
+        if (isOwner && isMounted) {
+          const ownerLic: UserLicense = {
+            ...DEFAULT_FREE_LICENSE,
+            tier: "enterprise",
+            status: "active",
+            holderEmail: profile?.email || "",
+            holderName: profile?.displayName || "Umar Hayat",
+            licenseKey: "NOVA-ENTERPRISE-OWNER-2026",
+            expiresAt: "2027-12-31T23:59:59.000Z",
+            maxExportsMonthly: 999,
+            maxResolution: "4k",
+            watermarkRequired: false,
+            canAutoPublish: true,
+            createdAt: "2026-01-01T00:00:00.000Z",
+            updatedAt: new Date().toISOString(),
+          };
+          setCurrentLicense(ownerLic);
+          if (profile?.email) setHolderEmail(profile.email);
+          if (profile?.displayName) setHolderName(profile.displayName);
+          if (onPlanChanged) onPlanChanged("enterprise");
+          return;
+        }
+
+        // Priority 2: Firebase profile plan
+        if (profile?.plan && profile.plan !== "free" && isMounted) {
+          const firebaseTier = PLAN_TO_TIER[profile.plan] || "free";
+          const lic = await LicensingRepository.getCurrentLicense();
+          // Only override if Firebase plan is better than stored
+          if (lic.tier === "free" || lic.status !== "active") {
+            const upgradedLic: UserLicense = {
+              ...DEFAULT_FREE_LICENSE,
+              tier: firebaseTier,
+              status: "active",
+              holderEmail: profile.email || lic.holderEmail,
+              holderName: profile.displayName || lic.holderName,
+              licenseKey: `NOVA-${firebaseTier.toUpperCase()}-CLOUD-${profile.uid?.slice(0, 8).toUpperCase() || "ACTIVE"}`,
+              expiresAt: "2027-12-31T23:59:59.000Z",
+              maxExportsMonthly: firebaseTier === "enterprise" ? 999 : firebaseTier === "pro_studio" ? 200 : 50,
+              maxResolution: firebaseTier === "enterprise" || firebaseTier === "pro_studio" ? "4k" : "1080p",
+              watermarkRequired: false,
+              canAutoPublish: firebaseTier === "enterprise" || firebaseTier === "pro_studio",
+              createdAt: profile.createdAt || new Date().toISOString(),
+              updatedAt: new Date().toISOString(),
+            };
+            if (isMounted) {
+              setCurrentLicense(upgradedLic);
+              setHolderEmail(upgradedLic.holderEmail);
+              setHolderName(upgradedLic.holderName);
+              if (onPlanChanged) onPlanChanged(firebaseTier);
+            }
+            return;
+          }
+          if (isMounted) {
+            setCurrentLicense(lic);
+            setHolderEmail(lic.holderEmail);
+            setHolderName(lic.holderName);
+          }
+          return;
+        }
+
+        // Priority 3: Local SQLite license
         const lic = await LicensingRepository.getCurrentLicense();
         if (isMounted) {
           setCurrentLicense(lic);
-          setHolderEmail(lic.holderEmail);
-          setHolderName(lic.holderName);
+          setHolderEmail(profile?.email || lic.holderEmail);
+          setHolderName(profile?.displayName || lic.holderName);
         }
       } catch (err) {
         console.warn("Failed loading license:", err);
@@ -39,7 +114,7 @@ export function LicensingStudioPage({ onPlanChanged }: LicensingStudioPageProps)
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [profile, isOwner]);
 
   const handleActivate = async () => {
     if (!inputKey.trim()) {

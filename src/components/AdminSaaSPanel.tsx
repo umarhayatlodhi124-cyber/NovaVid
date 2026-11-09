@@ -14,7 +14,7 @@ import {
   logoutFirebase,
   subscribeToAuthState,
 } from "../lib/firebase";
-import { collection, getDocs, doc, setDoc } from "firebase/firestore";
+import { collection, getDocs, doc, setDoc, deleteDoc } from "firebase/firestore";
 import type { User } from "firebase/auth";
 import {
   manualPaymentService,
@@ -55,7 +55,19 @@ export const AdminSaaSPanel: React.FC<AdminSaaSPanelProps> = ({ onNavigateToAwsC
       const stored = localStorage.getItem("novavid_registered_tenants");
       if (stored) {
         const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          // Filter ghost/fake entries from cached data
+          const clean = parsed.filter((t: TenantRecord) => {
+            const email = (t.ownerEmail || "").toLowerCase();
+            return (
+              !email.endsWith("@novavid.studio") &&
+              !email.startsWith("customer_prd_") &&
+              email !== "you@lodhitechx.com" &&
+              !email.includes("_prd_")
+            );
+          });
+          if (clean.length > 0) return clean;
+        }
       }
     } catch {}
     // Default real founder entry
@@ -80,6 +92,13 @@ export const AdminSaaSPanel: React.FC<AdminSaaSPanelProps> = ({ onNavigateToAwsC
   const [newTenantEmail, setNewTenantEmail] = useState("");
   const [newTenantTier, setNewTenantTier] = useState<TenantRecord["tier"]>("creator_pro");
   const [newTenantDevices, setNewTenantDevices] = useState(3);
+
+  // Edit Tenant State
+  const [editingTenant, setEditingTenant] = useState<TenantRecord | null>(null);
+  const [editName, setEditName] = useState("");
+  const [editEmail, setEditEmail] = useState("");
+  const [editTier, setEditTier] = useState<TenantRecord["tier"]>("creator_pro");
+  const [editDevices, setEditDevices] = useState(2);
 
   // Admin Auth Gate State
   const [currentUser, setCurrentUser] = useState<User | null>(auth.currentUser);
@@ -126,15 +145,33 @@ export const AdminSaaSPanel: React.FC<AdminSaaSPanelProps> = ({ onNavigateToAwsC
         const liveList: TenantRecord[] = [];
         snap.forEach((docSnap) => {
           const d = docSnap.data();
+          const email: string = (d.email || "").toLowerCase();
+
+          // Filter out fake/ghost entries: test domains, auto-generated emails, placeholder emails
+          const isGhost =
+            email.endsWith("@novavid.studio") ||
+            email.startsWith("customer_prd_") ||
+            email === "you@lodhitechx.com" ||
+            email === "you@example.com" ||
+            (email.includes("_prd_") && email.includes("@"));
+
+          if (isGhost) return; // skip fake entries
+
           const tier = (d.plan as TenantRecord["tier"]) || "starter";
           const mrr = tier === "enterprise" ? 199 : tier === "agency_studio" ? 99 : tier === "creator_pro" ? 29 : 0;
+
+          // Admin/owner emails always get enterprise
+          const isAdminEmail = AUTHORIZED_ADMIN_EMAILS.includes(email);
+          const finalTier = isAdminEmail ? "enterprise" : tier;
+          const finalMrr = isAdminEmail ? 199 : mrr;
+
           liveList.push({
             id: docSnap.id,
-            name: d.displayName || (d.email ? d.email.split("@")[0] : "Creator"),
-            ownerEmail: d.email || "",
-            tier,
-            mrr,
-            devices: d.isOwner ? 5 : 2,
+            name: d.displayName || (email ? email.split("@")[0] : "Creator"),
+            ownerEmail: email,
+            tier: finalTier,
+            mrr: finalMrr,
+            devices: d.isOwner || isAdminEmail ? 5 : 2,
             status: d.accountStatus === "suspended" ? "suspended" : "active",
             createdAt: d.createdAt ? new Date(d.createdAt).toISOString().split("T")[0] : "2026-11-09",
           });
@@ -154,8 +191,10 @@ export const AdminSaaSPanel: React.FC<AdminSaaSPanelProps> = ({ onNavigateToAwsC
           });
         }
 
-        setTenants(liveList);
+        // Clear stale localStorage and replace with fresh Firestore data
+        localStorage.removeItem("novavid_registered_tenants");
         localStorage.setItem("novavid_registered_tenants", JSON.stringify(liveList));
+        setTenants(liveList);
       }
     } catch (err) {
       console.warn("Could not query live Firestore users:", err);
@@ -319,6 +358,67 @@ export const AdminSaaSPanel: React.FC<AdminSaaSPanelProps> = ({ onNavigateToAwsC
     });
     setTenants(updated);
     localStorage.setItem("novavid_registered_tenants", JSON.stringify(updated));
+  };
+
+  // Open Edit Modal
+  const handleOpenEdit = (tenant: TenantRecord) => {
+    setEditingTenant(tenant);
+    setEditName(tenant.name);
+    setEditEmail(tenant.ownerEmail);
+    setEditTier(tenant.tier);
+    setEditDevices(tenant.devices);
+  };
+
+  // Save Edit
+  const handleSaveEdit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingTenant || !editName.trim() || !editEmail.trim()) return;
+    const mrr = editTier === "enterprise" ? 199 : editTier === "agency_studio" ? 99 : editTier === "creator_pro" ? 29 : 0;
+    const updated: TenantRecord = {
+      ...editingTenant,
+      name: editName.trim(),
+      ownerEmail: editEmail.trim().toLowerCase(),
+      tier: editTier,
+      mrr,
+      devices: editDevices,
+    };
+    // Update Firestore
+    try {
+      await setDoc(doc(db, "users", updated.id), {
+        displayName: updated.name,
+        email: updated.ownerEmail,
+        plan: updated.tier,
+        updatedAt: new Date().toISOString(),
+      }, { merge: true });
+    } catch (err) {
+      console.warn("Firestore update failed:", err);
+    }
+    const newList = tenants.map((t) => (t.id === updated.id ? updated : t));
+    setTenants(newList);
+    localStorage.setItem("novavid_registered_tenants", JSON.stringify(newList));
+    setAuditLogs((prev) => [
+      { id: `log_${Date.now()}`, action: `Tenant '${updated.name}' updated (tier: ${updated.tier})`, time: "Just now" },
+      ...prev,
+    ]);
+    setEditingTenant(null);
+  };
+
+  // Delete Tenant
+  const handleDeleteTenant = async (tenant: TenantRecord) => {
+    if (!window.confirm(`Delete tenant "${tenant.name}" (${tenant.ownerEmail})? This cannot be undone.`)) return;
+    // Remove from Firestore
+    try {
+      await deleteDoc(doc(db, "users", tenant.id));
+    } catch (err) {
+      console.warn("Firestore delete failed:", err);
+    }
+    const newList = tenants.filter((t) => t.id !== tenant.id);
+    setTenants(newList);
+    localStorage.setItem("novavid_registered_tenants", JSON.stringify(newList));
+    setAuditLogs((prev) => [
+      { id: `log_${Date.now()}`, action: `Tenant '${tenant.name}' deleted from fleet`, time: "Just now" },
+      ...prev,
+    ]);
   };
 
   const handleGenerateLicense = async (e: React.FormEvent) => {
@@ -910,6 +1010,18 @@ export const AdminSaaSPanel: React.FC<AdminSaaSPanelProps> = ({ onNavigateToAwsC
                             >
                               {tenant.status === "active" ? "Suspend" : "Activate"}
                             </button>
+                            <button
+                              onClick={() => handleOpenEdit(tenant)}
+                              className="px-2.5 py-1 rounded text-[11px] font-semibold bg-blue-950/40 text-blue-300 border border-blue-800 hover:bg-blue-900/60 transition-colors cursor-pointer"
+                            >
+                              ✏️ Edit
+                            </button>
+                            <button
+                              onClick={() => handleDeleteTenant(tenant)}
+                              className="px-2.5 py-1 rounded text-[11px] font-semibold bg-red-950/40 text-red-300 border border-red-800 hover:bg-red-900/60 transition-colors cursor-pointer"
+                            >
+                              🗑️ Delete
+                            </button>
                           </td>
                         </tr>
                       ))
@@ -1363,6 +1475,76 @@ export const AdminSaaSPanel: React.FC<AdminSaaSPanelProps> = ({ onNavigateToAwsC
                 Confirm Rejection
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── MODAL: Edit Tenant ── */}
+      {editingTenant && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="w-full max-w-md p-6 bg-[#0d1428] border border-blue-500/40 rounded-2xl shadow-2xl">
+            <h3 className="text-sm font-bold text-blue-300 mb-4">✏️ Edit Tenant — {editingTenant.ownerEmail}</h3>
+            <form onSubmit={handleSaveEdit} className="space-y-3">
+              <div>
+                <label className="block text-xs text-slate-400 mb-1">Organization / Name</label>
+                <input
+                  type="text"
+                  value={editName}
+                  onChange={(e) => setEditName(e.target.value)}
+                  required
+                  className="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-xl text-xs text-white outline-none focus:border-blue-500"
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-slate-400 mb-1">Email Address</label>
+                <input
+                  type="email"
+                  value={editEmail}
+                  onChange={(e) => setEditEmail(e.target.value)}
+                  required
+                  className="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-xl text-xs text-white outline-none focus:border-blue-500"
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-slate-400 mb-1">Subscription Tier</label>
+                <select
+                  value={editTier}
+                  onChange={(e) => setEditTier(e.target.value as TenantRecord["tier"])}
+                  className="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-xl text-xs text-slate-200 outline-none"
+                >
+                  <option value="starter">Starter ($0/mo)</option>
+                  <option value="creator_pro">Creator Pro ($29/mo)</option>
+                  <option value="agency_studio">Agency Studio ($99/mo)</option>
+                  <option value="enterprise">Enterprise ($199/mo)</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs text-slate-400 mb-1">Device Seats</label>
+                <input
+                  type="number"
+                  min={1}
+                  max={50}
+                  value={editDevices}
+                  onChange={(e) => setEditDevices(Number(e.target.value))}
+                  className="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-xl text-xs text-white outline-none focus:border-blue-500"
+                />
+              </div>
+              <div className="flex gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setEditingTenant(null)}
+                  className="flex-1 py-2 rounded-xl bg-slate-800 text-slate-300 text-xs font-semibold cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold cursor-pointer"
+                >
+                  Save Changes
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
