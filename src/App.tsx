@@ -314,9 +314,11 @@ export const navigation = [
   { label: "Settings", view: "settings" as const, icon: "settings" },
 ];
 
-export function getFilteredNavigation(mode: UserMode) {
+export function getFilteredNavigation(mode: UserMode, isOwner: boolean = false) {
+  const items = isOwner ? navigation : navigation.filter((item) => item.view !== "admin_saas");
+
   if (mode === "beginner") {
-    return navigation.filter((item) =>
+    return items.filter((item) =>
       ["dashboard", "automation", "avatar", "google_youtube", "aws_cloud", "agent", "projects", "publish", "settings"].includes(item.view)
     );
   }
@@ -325,7 +327,7 @@ export function getFilteredNavigation(mode: UserMode) {
       !["license", "customer_saas", "admin_saas", "analytics", "research", "providers"].includes(item.view)
     );
   }
-  return navigation; // Advanced mode shows all
+  return items; // Advanced mode shows all (admin_saas only if isOwner)
 }
 
 const plannedNavigation = [
@@ -336,7 +338,7 @@ const plannedNavigation = [
 function App() {
   const [view, setView] = useState<View>("dashboard");
   const [projects, setProjects] = useState<Project[]>([]);
-  const { user: firebaseUser } = useAuth();
+  const { user: firebaseUser, isOwner } = useAuth();
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [isOnboardingOpen, setIsOnboardingOpen] = useState(false);
   const [storageState, setStorageState] = useState<StorageState>("connecting");
@@ -776,7 +778,7 @@ function App() {
     ? (ROMAN_URDU_PAGE_TITLES[view] || englishPageTitle)
     : englishPageTitle;
 
-  const filteredNavigation = useMemo(() => getFilteredNavigation(userMode), [userMode]);
+  const filteredNavigation = useMemo(() => getFilteredNavigation(userMode, isOwner), [userMode, isOwner]);
 
   async function handleNativeMediaImport() {
     try {
@@ -1594,7 +1596,7 @@ Please structure the script with the following sections:
             <LicensingStudioPage />
           ) : view === "customer_saas" ? (
             <CustomerSaaSPanel onNavigateToAwsConnection={() => setView("aws_cloud")} />
-          ) : view === "admin_saas" ? (
+          ) : (view === "admin_saas" && isOwner) ? (
             <AdminSaaSPanel onNavigateToAwsConnection={() => setView("aws_cloud")} />
           ) : (
             <SettingsPage
