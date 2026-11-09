@@ -218,7 +218,7 @@ export function GoogleYouTubeConnectionCenter({
     try {
       await saveGeminiKey(geminiInputKey);
       setGeminiInputKey("");
-      showNotice("success", "âœ… Google Gemini API key securely encrypted in Windows Credential Manager.");
+      showNotice("success", "✅ Google Gemini API key securely encrypted in Windows Credential Manager.");
       await refreshAllData();
     } catch (err: any) {
       showNotice("error", err.message || "Failed to save Gemini API key.");
@@ -343,7 +343,7 @@ export function GoogleYouTubeConnectionCenter({
       );
 
       if (token) {
-        showNotice("success", "âœ… YouTube Channel successfully authorized via Google OAuth 2.0 PKCE!");
+        showNotice("success", "✅ YouTube Channel successfully authorized via Google OAuth 2.0 PKCE!");
         await refreshAllData();
       }
     } catch (err: any) {
@@ -376,7 +376,7 @@ export function GoogleYouTubeConnectionCenter({
         errorMessage: authState.lastError || null,
         status: authState.authenticated ? "connected" : (authState.lastError ? "error" : "disconnected"),
       }));
-      showNotice("success", "âœ… Channel statistics synchronized with YouTube Data API v3.");
+      showNotice("success", "✅ Channel statistics synchronized with YouTube Data API v3.");
       const diag = await runConnectionDiagnostics();
       setDiagnostics(diag);
     } catch (err: any) {
@@ -408,7 +408,7 @@ export function GoogleYouTubeConnectionCenter({
       setCustomClientSecretInput("");
       setTestConfigResult(null);
       setShowConfigWizard(false);
-      showNotice("success", "âœ… OAuth Client credentials encrypted in Windows Credential Manager (DPAPI).");
+      showNotice("success", "✅ OAuth Client credentials encrypted in Windows Credential Manager (DPAPI).");
       await refreshAllData();
     } catch (err: any) {
       showNotice("error", `Failed to save client config: ${err.message || String(err)}`);
@@ -442,7 +442,7 @@ export function GoogleYouTubeConnectionCenter({
     setIsTestingRefresh(true);
     try {
       const msg = await youtubeTestRefreshToken();
-      showNotice("success", `âœ… ${msg}`);
+      showNotice("success", `✅ ${msg}`);
       await refreshAllData();
     } catch (err: any) {
       showNotice("error", `Refresh test failed: ${err.message || String(err)}`);
@@ -455,7 +455,7 @@ export function GoogleYouTubeConnectionCenter({
     setIsTestingAuthFlow(true);
     try {
       const msg = await youtubeTestAuthFlow();
-      showNotice("success", `âœ… ${msg}`);
+      showNotice("success", `✅ ${msg}`);
     } catch (err: any) {
       showNotice("error", `PKCE flow test failed: ${err.message || String(err)}`);
     } finally {
@@ -506,7 +506,7 @@ export function GoogleYouTubeConnectionCenter({
               LODHI TECHX Studio
             </span>
             <span className="gy-pill gy-pill-dpapi">
-              <span>ðŸ”’</span> DPAPI Hardware Vault Isolation
+              <span>🔒</span> DPAPI Hardware Vault Isolation
             </span>
           </div>
           <h1>Google & YouTube Connection Center</h1>
@@ -521,7 +521,7 @@ export function GoogleYouTubeConnectionCenter({
             className="gy-btn gy-btn-secondary"
             type="button"
           >
-            <span>âš™ï¸</span> OAuth Client Config
+            <span>⚙️</span> OAuth Client Config
           </button>
           <button
             onClick={refreshAllData}
@@ -529,7 +529,7 @@ export function GoogleYouTubeConnectionCenter({
             className="gy-btn gy-btn-sky"
             type="button"
           >
-            <span>ðŸ”„</span> Refresh Connections
+            <span>🔄</span> Refresh Connections
           </button>
         </div>
       </div>
@@ -546,7 +546,7 @@ export function GoogleYouTubeConnectionCenter({
           }`}
         >
           <div>
-            <span>{notification.type === "success" ? "âœ… " : notification.type === "error" ? "âŒ " : "â„¹ï¸ "}</span>
+            <span>{notification.type === "success" ? "✅ " : notification.type === "error" ? "❌ " : "ℹ️ "}</span>
             {notification.message}
           </div>
           <button
@@ -554,7 +554,7 @@ export function GoogleYouTubeConnectionCenter({
             style={{ background: "none", border: "none", color: "inherit", cursor: "pointer", fontWeight: "bold" }}
             type="button"
           >
-            âœ•
+            ✕
           </button>
         </div>
       )}
@@ -563,7 +563,7 @@ export function GoogleYouTubeConnectionCenter({
       <div className="gy-isolation-banner">
         <div className="gy-isolation-left">
           <div className="gy-isolation-icon">
-            ðŸ›¡ï¸
+            🛡️
           </div>
           <div className="gy-isolation-text">
             <strong>Dual Google Account Architecture & Isolation Guarantee</strong>
@@ -589,7 +589,7 @@ export function GoogleYouTubeConnectionCenter({
             <div className="gy-card-header">
               <div className="gy-card-title-wrap">
                 <div className="gy-avatar-icon gy-icon-sky">
-                  âœ¨
+                  ✨
                 </div>
                 <div>
                   <h2>Google Gemini AI</h2>
@@ -643,7 +643,7 @@ export function GoogleYouTubeConnectionCenter({
               <div className="gy-meta-box">
                 <span className="gy-meta-label">Storage Status</span>
                 <span className="gy-meta-value">
-                  ðŸ”’ DPAPI Encrypted Vault
+                  🔒 DPAPI Encrypted Vault
                 </span>
               </div>
               <div className="gy-meta-box">
@@ -692,7 +692,7 @@ export function GoogleYouTubeConnectionCenter({
                   .filter((m) => m.supportsText)
                   .map((m) => (
                     <option key={m.id} value={m.id}>
-                      {m.displayName} ({m.id}) â€” {m.pricing || "Google AI Studio Standard"}
+                      {m.displayName} ({m.id}) — {m.pricing || "Google AI Studio Standard"}
                     </option>
                   ))}
               </select>
@@ -700,7 +700,7 @@ export function GoogleYouTubeConnectionCenter({
                 <div style={{ marginTop: "8px", padding: "8px 10px", background: "#090d16", borderRadius: "6px", border: "1px solid #1e293b", fontSize: "11px" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "4px" }}>
                     <span style={{ color: "#94a3b8" }}>API Model ID: <code style={{ color: "#38bdf8" }}>{selectedModelInfo.id}</code></span>
-                    <span style={{ color: "#10b981", fontWeight: 600 }}>â— {selectedModelInfo.status.toUpperCase()}</span>
+                    <span style={{ color: "#10b981", fontWeight: 600 }}>● {selectedModelInfo.status.toUpperCase()}</span>
                   </div>
                   <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "4px" }}>
                     <span style={{ color: "#94a3b8" }}>Input/Output Pricing: <strong style={{ color: "#fbbf24" }}>{selectedModelInfo.pricing || "Official AI Studio Pricing"}</strong></span>
@@ -723,7 +723,7 @@ export function GoogleYouTubeConnectionCenter({
                   rel="noreferrer"
                   style={{ color: "#38bdf8", textDecoration: "none", fontSize: "11px", textTransform: "none", fontWeight: 600 }}
                 >
-                  Get Free Key at Google AI Studio â†—
+                  Get Free Key at Google AI Studio ↗
                 </a>
               </div>
               <div className="gy-input-wrap">
@@ -731,7 +731,7 @@ export function GoogleYouTubeConnectionCenter({
                   type={showGeminiKey ? "text" : "password"}
                   placeholder={
                     geminiState.configured
-                      ? "AIzaSyâ€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢"
+                      ? "AIzaSy••••••••••••••••••••••••••••••••••••"
                       : "Paste AIzaSy... API key from Google AI Studio"
                   }
                   value={geminiInputKey}
@@ -817,7 +817,7 @@ export function GoogleYouTubeConnectionCenter({
                 className="gy-btn gy-btn-secondary"
                 type="button"
               >
-                {isTestingGemini ? "Pinging..." : "âš¡ Test API Connection"}
+                {isTestingGemini ? "Pinging..." : "⚡ Test API Connection"}
               </button>
             </div>
 
@@ -842,7 +842,7 @@ export function GoogleYouTubeConnectionCenter({
             <div className="gy-card-header">
               <div className="gy-card-title-wrap">
                 <div className="gy-avatar-icon gy-icon-rose">
-                  â–¶
+                  ▶
                 </div>
                 <div>
                   <h2>YouTube Integration</h2>
@@ -864,15 +864,15 @@ export function GoogleYouTubeConnectionCenter({
                   </span>
                 ) : youtubeState.status === "token_expired" || youtubeState.status === "reauth_required" ? (
                   <span className="gy-status-badge gy-badge-warning">
-                    âš  Reauthorization Needed
+                    ⚠️ Reauthorization Needed
                   </span>
                 ) : youtubeState.status === "error" ? (
                   <span className="gy-status-badge gy-badge-error">
-                    âœ• Connection Error
+                    ✕ Connection Error
                   </span>
                 ) : (
                   <span className="gy-status-badge gy-badge-disconnected">
-                    â—‹ Disconnected
+                    ○ Disconnected
                   </span>
                 )}
               </div>
@@ -882,14 +882,14 @@ export function GoogleYouTubeConnectionCenter({
             <div style={{ marginBottom: "16px", padding: "12px 14px", borderRadius: "10px", background: "#090d16", border: "1px solid #1e293b", display: "flex", flexDirection: "column", gap: "8px" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <span style={{ fontSize: "11px", fontWeight: 700, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.05em", display: "flex", alignItems: "center", gap: "6px" }}>
-                  <span>ðŸ”</span> Google Cloud OAuth 2.0 Desktop Credentials
+                  <span>🔐</span> Google Cloud OAuth 2.0 Desktop Credentials
                 </span>
                 <button
                   onClick={() => setShowConfigWizard(true)}
                   style={{ background: "none", border: "none", color: "#38bdf8", fontSize: "11px", cursor: "pointer", display: "flex", alignItems: "center", gap: "4px", padding: 0 }}
                   type="button"
                 >
-                  <span>âš™ï¸</span> Edit / Test Config
+                  <span>⚙️</span> Edit / Test Config
                 </button>
               </div>
 
@@ -900,14 +900,14 @@ export function GoogleYouTubeConnectionCenter({
                     <code style={{ color: "#38bdf8", fontFamily: "monospace", fontSize: "10px" }}>
                       {customClientIdInput.length > 26 ? `${customClientIdInput.substring(0, 22)}...` : customClientIdInput}
                     </code>
-                    <span style={{ color: "#10b981", fontSize: "10px", fontWeight: 600 }}>â— Active</span>
+                    <span style={{ color: "#10b981", fontSize: "10px", fontWeight: 600 }}>● Active</span>
                   </div>
                 </div>
                 <div>
                   <span style={{ color: "#64748b", display: "block", marginBottom: "2px" }}>OAuth Client Secret:</span>
                   {hasClientSecret ? (
                     <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                      <span style={{ color: "#e2e8f0", fontFamily: "monospace", fontSize: "10px" }}>â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢</span>
+                      <span style={{ color: "#e2e8f0", fontFamily: "monospace", fontSize: "10px" }}>••••••••••••••••</span>
                       <span style={{ color: "#10b981", fontSize: "10px", fontWeight: 600 }}>(DPAPI Encrypted)</span>
                     </div>
                   ) : youtubeState.authenticated ? (
@@ -919,7 +919,7 @@ export function GoogleYouTubeConnectionCenter({
                   ) : (
                     <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
                       <span style={{ color: "#f43f5e", fontSize: "10px", fontWeight: 700 }}>
-                        âš ï¸ Missing (Action Required)
+⚠️ Missing (Action Required)
                       </span>
                     </div>
                   )}
@@ -943,7 +943,7 @@ export function GoogleYouTubeConnectionCenter({
                     cursor: youtubeState.hasRefreshToken ? "pointer" : "not-allowed",
                   }}
                 >
-                  {isTestingRefresh ? "Testing Refresh..." : "âš¡ Verify Token Renewal"}
+                  {isTestingRefresh ? "Testing Refresh..." : "⚡ Verify Token Renewal"}
                 </button>
                 <button
                   type="button"
@@ -960,7 +960,7 @@ export function GoogleYouTubeConnectionCenter({
                     cursor: "pointer",
                   }}
                 >
-                  {isTestingAuthFlow ? "Testing PKCE..." : "ðŸ” Verify PKCE Flow"}
+                  {isTestingAuthFlow ? "Testing PKCE..." : "🔐 Verify PKCE Flow"}
                 </button>
               </div>
             </div>
@@ -1022,7 +1022,7 @@ export function GoogleYouTubeConnectionCenter({
                         style={{ padding: "3px 8px", fontSize: "10px", display: "flex", alignItems: "center", gap: "4px" }}
                         title="Synchronize live statistics from YouTube Data API v3"
                       >
-                        <span style={{ display: "inline-block", transform: isRefreshingChannels ? "rotate(180deg)" : "none", transition: "transform 0.5s ease" }}>ðŸ”„</span>
+                        <span style={{ display: "inline-block", transform: isRefreshingChannels ? "rotate(180deg)" : "none", transition: "transform 0.5s ease" }}>🔄</span>
                         {isRefreshingChannels ? "Syncing..." : "Sync Live Stats"}
                       </button>
                     </div>
@@ -1037,7 +1037,7 @@ export function GoogleYouTubeConnectionCenter({
                   {/* Subscribers */}
                   <div className="gy-stat-card">
                     <span className="gy-stat-header">
-                      <span>ðŸ‘¥</span> Subscribers
+                      <span>👥</span> Subscribers
                     </span>
                     <div className="gy-stat-num">
                       {youtubeState.selectedChannel.hiddenSubscriberCount
@@ -1050,7 +1050,7 @@ export function GoogleYouTubeConnectionCenter({
                   {/* Total Views */}
                   <div className="gy-stat-card">
                     <span className="gy-stat-header">
-                      <span>ðŸ‘ï¸</span> Total Views
+                      <span>👁️</span> Total Views
                     </span>
                     <div className="gy-stat-num">
                       {formatNumber(youtubeState.selectedChannel.viewCount)}
@@ -1061,7 +1061,7 @@ export function GoogleYouTubeConnectionCenter({
                   {/* Uploaded Videos */}
                   <div className="gy-stat-card">
                     <span className="gy-stat-header">
-                      <span>ðŸŽ¬</span> Uploads
+                      <span>🎬</span> Uploads
                     </span>
                     <div className="gy-stat-num">
                       {formatNumber(youtubeState.selectedChannel.videoCount)}
@@ -1072,7 +1072,7 @@ export function GoogleYouTubeConnectionCenter({
                   {/* Channel Created */}
                   <div className="gy-stat-card">
                     <span className="gy-stat-header">
-                      <span>ðŸ“…</span> Created
+                      <span>📅</span> Created
                     </span>
                     <div className="gy-stat-num" style={{ fontSize: "13px", paddingTop: "3px" }} title={youtubeState.selectedChannel.publishedAt || ""}>
                       {formatDate(youtubeState.selectedChannel.publishedAt)}
@@ -1089,7 +1089,7 @@ export function GoogleYouTubeConnectionCenter({
                       target="_blank"
                       rel="noreferrer"
                     >
-                      <span>Studio</span> â†—
+                      <span>Studio</span> ↗
                     </a>
                     <span style={{ color: "#334155" }}>|</span>
                     <a
@@ -1098,7 +1098,7 @@ export function GoogleYouTubeConnectionCenter({
                       rel="noreferrer"
                       style={{ color: "#e2e8f0" }}
                     >
-                      <span>Public Channel</span> â†—
+                      <span>Public Channel</span> ↗
                     </a>
                   </div>
 
@@ -1108,7 +1108,7 @@ export function GoogleYouTubeConnectionCenter({
                       style={{ background: "rgba(225, 29, 72, 0.15)", border: "1px solid rgba(225, 29, 72, 0.3)", color: "#fb7185", borderRadius: "8px", padding: "5px 12px", fontSize: "11px", fontWeight: 700, cursor: "pointer" }}
                       type="button"
                     >
-                      Open Publishing Studio â†’
+                      Open Publishing Studio →
                     </button>
                   )}
                 </div>
@@ -1118,7 +1118,7 @@ export function GoogleYouTubeConnectionCenter({
               <div>
                 <div className="gy-cta-box">
                   <div className="gy-cta-icon">
-                    â–¶
+                    ▶
                   </div>
                   <h3>One-Click LODHI TECHX Channel Authorization</h3>
                   <p>
@@ -1132,7 +1132,7 @@ export function GoogleYouTubeConnectionCenter({
                     type="button"
                     style={{ padding: "12px 24px", fontSize: "13px" }}
                   >
-                    <span>ðŸ“º</span>
+                    <span>📺</span>
                     <span>{isAuthenticatingYT ? "Waiting for Browser Authorization..." : "Connect YouTube Channel"}</span>
                   </button>
                 </div>
@@ -1201,7 +1201,7 @@ export function GoogleYouTubeConnectionCenter({
                     className="gy-btn gy-btn-secondary"
                     type="button"
                   >
-                    <span>ðŸ”„</span>
+                    <span>🔄</span>
                     <span>Refresh Channel Data</span>
                   </button>
                   <button
@@ -1235,7 +1235,7 @@ export function GoogleYouTubeConnectionCenter({
         <div className="gy-diag-header">
           <div>
             <h3 style={{ margin: "0 0 4px", fontSize: "18px", fontWeight: 800, color: "#ffffff", display: "flex", alignItems: "center", gap: "8px" }}>
-              <span>ðŸ©º</span> Automatic Configuration & Health Diagnostics
+              <span>🩺</span> Automatic Configuration & Health Diagnostics
             </h3>
             <p style={{ margin: 0, fontSize: "12px", color: "#94a3b8" }}>
               Live validation of Google Cloud credentials, OAuth scopes, DPAPI keychains, and mandatory safety gates.
@@ -1246,10 +1246,10 @@ export function GoogleYouTubeConnectionCenter({
             {diagnostics && (
               <div style={{ display: "flex", gap: "6px" }}>
                 <span className={`gy-pill ${diagnostics.overallHealthy ? "gy-pill-dpapi" : "gy-pill-brand"}`}>
-                  {diagnostics.overallHealthy ? "â— System Healthy" : "âœ• Needs Attention"}
+                  {diagnostics.overallHealthy ? "● System Healthy" : "✕ Needs Attention"}
                 </span>
                 <span className={`gy-pill ${diagnostics.canUpload ? "gy-pill-dpapi" : "gy-pill-brand"}`} style={{ opacity: diagnostics.canUpload ? 1 : 0.6 }}>
-                  {diagnostics.canUpload ? "â— Upload Ready" : "â—‹ Upload Offline"}
+                  {diagnostics.canUpload ? "● Upload Ready" : "○ Upload Offline"}
                 </span>
                 <span
                   className={`gy-pill ${diagnostics.canGenerateAI ? "gy-pill-dpapi" : "gy-pill-brand"}`}
@@ -1319,7 +1319,7 @@ export function GoogleYouTubeConnectionCenter({
                     rel="noreferrer"
                     className="gy-diag-link"
                   >
-                    {item.actionText || "Learn More"} â†—
+                    {item.actionText || "Learn More"} ↗
                   </a>
                 </div>
               )}
@@ -1333,7 +1333,7 @@ export function GoogleYouTubeConnectionCenter({
         <div className="gy-diag-header">
           <div>
             <h3 style={{ margin: "0 0 4px", fontSize: "18px", fontWeight: 800, color: "#ffffff", display: "flex", alignItems: "center", gap: "8px" }}>
-              <span>ðŸ“‹</span> Recent YouTube Upload Activity & History
+              <span>📋</span> Recent YouTube Upload Activity & History
             </h3>
             <p style={{ margin: 0, fontSize: "12px", color: "#94a3b8" }}>
               History of rendered videos uploaded via the YouTube Data API resumable protocol.
@@ -1398,7 +1398,7 @@ export function GoogleYouTubeConnectionCenter({
                     </td>
                     <td>
                       <span style={{ padding: "2px 6px", borderRadius: "4px", background: "#1e293b", fontSize: "10px", fontWeight: 600 }}>
-                        ðŸ”’ Private
+                        🔒 Private
                       </span>
                     </td>
                     <td style={{ fontFamily: "monospace", color: "#ffffff", fontWeight: 700 }}>
@@ -1418,7 +1418,7 @@ export function GoogleYouTubeConnectionCenter({
                           rel="noreferrer"
                           style={{ color: "#f43f5e", fontWeight: 700, textDecoration: "none" }}
                         >
-                          Studio â†—
+                          Studio ↗
                         </a>
                       )}
                     </td>
@@ -1436,14 +1436,14 @@ export function GoogleYouTubeConnectionCenter({
           <div className="gy-modal-card">
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingBottom: "16px", borderBottom: "1px solid #1e293b" }}>
               <h3 style={{ margin: 0, fontSize: "16px", fontWeight: 800, color: "#ffffff", display: "flex", alignItems: "center", gap: "8px" }}>
-                <span>âš™ï¸</span> Custom Google Cloud OAuth Client ID
+                <span>⚙️</span> Custom Google Cloud OAuth Client ID
               </h3>
               <button
                 onClick={() => setShowConfigWizard(false)}
                 style={{ background: "none", border: "none", color: "#94a3b8", fontSize: "16px", cursor: "pointer" }}
                 type="button"
               >
-                âœ•
+                ✕
               </button>
             </div>
 
@@ -1476,11 +1476,11 @@ export function GoogleYouTubeConnectionCenter({
                   </label>
                   {hasClientSecret ? (
                     <span style={{ color: "#10b981", fontSize: "10px", fontWeight: 600 }}>
-                      ðŸ”’ Encrypted in DPAPI
+                      🔒 Encrypted in DPAPI
                     </span>
                   ) : (
                     <span style={{ color: "#f43f5e", fontSize: "10px", fontWeight: 600 }}>
-                      âš ï¸ Required for Google OAuth
+⚠️ Required for Google OAuth
                     </span>
                   )}
                 </div>
@@ -1491,7 +1491,7 @@ export function GoogleYouTubeConnectionCenter({
                     onChange={(e) => setCustomClientSecretInput(e.target.value)}
                     placeholder={
                       hasClientSecret
-                        ? "â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢ (Encrypted in DPAPI â€” leave blank to keep)"
+                        ? "••••••••••••••••••••••••••••••••••• (Encrypted in DPAPI — leave blank to keep)"
                         : "Enter Client Secret starting with GOCSPX-..."
                     }
                     className="gy-input gy-input-mono"
@@ -1503,7 +1503,7 @@ export function GoogleYouTubeConnectionCenter({
                     style={{ position: "absolute", right: "10px", top: "50%", transform: "translateY(-50%)", background: "none", border: "none", color: "#94a3b8", cursor: "pointer", fontSize: "14px" }}
                     title={showSecretInModal ? "Hide Secret" : "Show Secret"}
                   >
-                    {showSecretInModal ? "ðŸ™ˆ" : "ðŸ‘ï¸"}
+                    {showSecretInModal ? "🙈" : "👁️"}
                   </button>
                 </div>
               </div>
@@ -1519,7 +1519,7 @@ export function GoogleYouTubeConnectionCenter({
                     color: testConfigResult.success ? "#34d399" : "#f87171",
                   }}
                 >
-                  <strong>{testConfigResult.success ? "âœ… Valid: " : "âŒ Error: "}</strong>
+                  <strong>{testConfigResult.success ? "✅ Valid: " : "❌ Error: "}</strong>
                   {testConfigResult.message}
                 </div>
               )}
@@ -1540,7 +1540,7 @@ export function GoogleYouTubeConnectionCenter({
                 type="button"
                 style={{ fontSize: "11px", padding: "8px 14px" }}
               >
-                <span>ðŸ§ª</span> Validate Credentials
+                <span>🧪</span> Validate Credentials
               </button>
 
               <div style={{ display: "flex", gap: "10px" }}>

@@ -35,6 +35,10 @@ keyring = { version = "4.2", default-features = false, features = ["v1", "window
 
 
 # Read the optimization guideline for more details: https://tauri.app/concept/size/#cargo-configuration
+[profile.dev]
+debug = 1
+incremental = false
+
 [profile.release]
 codegen-units = 1
 lto = true

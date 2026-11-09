@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import {
   type TaleemiDuniyaMode,
   type AvatarLayout,
@@ -31,6 +31,45 @@ export const AvatarStudioPage: React.FC<AvatarStudioPageProps> = ({
   const [generationSuccess, setGenerationSuccess] = useState<string | null>(
     "Umar_Hayat_Urdu_AI_Avatar_Demonstration.mp4"
   );
+
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [customAvatarUrl, setCustomAvatarUrl] = useState<string>(() => {
+    try {
+      return localStorage.getItem("novavid_custom_avatar_face") || "/avatars/umar_hayat.png";
+    } catch {
+      return "/avatars/umar_hayat.png";
+    }
+  });
+
+  const hasCustomFace = customAvatarUrl !== "/avatars/umar_hayat.png";
+
+  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const dataUrl = event.target?.result as string;
+      if (dataUrl) {
+        setCustomAvatarUrl(dataUrl);
+        try {
+          localStorage.setItem("novavid_custom_avatar_face", dataUrl);
+        } catch (err) {
+          console.warn("Failed to persist avatar:", err);
+        }
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleResetPhoto = () => {
+    setCustomAvatarUrl("/avatars/umar_hayat.png");
+    try {
+      localStorage.removeItem("novavid_custom_avatar_face");
+    } catch {}
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
 
   const ownerProfile = getOwnerAvatarProfile(currentUserId);
   const estimatedCost = estimateAvatarVideoCost(60, selectedProvider);
@@ -69,8 +108,8 @@ export const AvatarStudioPage: React.FC<AvatarStudioPageProps> = ({
 
         <div className="flex items-center space-x-3 bg-gray-900 border border-gray-800 p-2.5 rounded-xl">
           <img
-            src="/avatars/umar_hayat.png"
-            alt="Umar Hayat"
+            src={customAvatarUrl}
+            alt={ownerProfile.name}
             className="w-12 h-12 rounded-full object-cover border-2 border-emerald-500 shadow-lg shadow-emerald-500/20"
             onError={(e) => {
               (e.currentTarget as HTMLElement).style.display = "none";
@@ -308,18 +347,58 @@ export const AvatarStudioPage: React.FC<AvatarStudioPageProps> = ({
               Photorealistic Presenter Model
             </h3>
             <div className="relative rounded-lg overflow-hidden bg-gradient-to-br from-gray-800 to-gray-950 border border-gray-700 p-4 text-center">
-              <div className="relative w-36 h-36 mx-auto rounded-full overflow-hidden border-2 border-emerald-400 shadow-xl shadow-emerald-500/20 mb-3">
+              <div
+                onClick={() => fileInputRef.current?.click()}
+                className="relative w-36 h-36 mx-auto rounded-full overflow-hidden border-2 border-emerald-400 shadow-xl shadow-emerald-500/20 mb-3 cursor-pointer group"
+                title="Click to upload your own face photo"
+              >
                 <img
-                  src="/avatars/umar_hayat.png"
-                  alt="Umar Hayat"
-                  className="w-full h-full object-cover"
+                  src={customAvatarUrl}
+                  alt={ownerProfile.name}
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                 />
+                <div className="absolute inset-0 bg-black/50 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                  <span className="text-2xl">📷</span>
+                  <span className="text-[11px] text-white font-bold mt-1">Change Face</span>
+                </div>
               </div>
+
+              {/* Upload & Reset Buttons */}
+              <div className="flex items-center justify-center gap-2 mb-3">
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="px-3 py-1.5 rounded-lg bg-emerald-600/30 hover:bg-emerald-600/50 border border-emerald-500/50 text-emerald-300 text-xs font-semibold flex items-center gap-1.5 transition-all shadow-sm"
+                >
+                  <span>📷</span> Upload Your Face
+                </button>
+                {hasCustomFace && (
+                  <button
+                    type="button"
+                    onClick={handleResetPhoto}
+                    className="px-2.5 py-1.5 rounded-lg bg-gray-800 hover:bg-gray-700 border border-gray-700 text-gray-300 text-xs font-medium transition-all"
+                    title="Reset to default avatar"
+                  >
+                    ↺ Reset
+                  </button>
+                )}
+              </div>
+
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/png, image/jpeg, image/jpg, image/webp"
+                onChange={handlePhotoUpload}
+                style={{ display: "none" }}
+              />
+
               <h4 className="text-base font-bold text-white">{ownerProfile.name}</h4>
               <p className="text-xs text-emerald-400 font-medium mt-0.5">{ownerProfile.title}</p>
               <div className="mt-3 flex items-center justify-center space-x-2">
                 <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-                <span className="text-[11px] text-gray-300">Biometric Neural Visemes Active</span>
+                <span className="text-[11px] text-gray-300">
+                  {hasCustomFace ? "Custom Neural Face Active" : "Biometric Neural Visemes Active"}
+                </span>
               </div>
             </div>
 

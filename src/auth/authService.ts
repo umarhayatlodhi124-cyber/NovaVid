@@ -6,6 +6,7 @@ import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   signInWithPopup,
+  signInWithCredential,
   signOut,
   sendPasswordResetEmail,
   sendEmailVerification,
@@ -16,6 +17,11 @@ import { doc, getDoc, setDoc } from "firebase/firestore";
 import { auth, db } from "../lib/firebase";
 import { isTauriEnvironment } from "../lib/platformStorage";
 import type { UserProfile, UserRole, SubscriptionPlan } from "./AuthContext";
+
+// Google OAuth2 Web Client ID for desktop loopback sign-in
+const GOOGLE_WEB_CLIENT_ID =
+  (import.meta.env.VITE_GOOGLE_OAUTH_CLIENT_ID as string) ||
+  "566848341353-auto.apps.googleusercontent.com";
 
 export const PERMANENT_OWNER_EMAILS = [
   "umarhayatlodhi124@gmail.com",
@@ -101,16 +107,24 @@ export async function loginWithGoogleAuth(): Promise<{ user: User; profile: User
   provider.setCustomParameters({ prompt: "select_account" });
 
   if (isTauriEnvironment()) {
-    // Tauri desktop WebView cannot host OAuth popups — the WebView2 runtime
-    // blocks cross-origin popup windows required by Firebase's signInWithPopup.
-    // Throw a clear, actionable message so the UI can guide the user.
-    throw Object.assign(
-      new Error(
-        "Google Sign-In is not available in the desktop app. Please sign in with your Email & Password above. " +
-        "To use Google Sign-In, open https://novavid-ecfc8.web.app in your browser."
-      ),
-      { code: "auth/operation-not-supported-in-this-environment" }
-    );
+    // Desktop: use system-browser OAuth2 loopback (port 8912) instead of WebView2 popup.
+    // WebView2 is flagged as disallowed_useragent by Google so signInWithPopup always fails.
+    // Calls the Rust 'google_oauth_loopback' Tauri command which:
+    //   1. Opens system Chrome/Edge with Google OAuth URL
+    //   2. Listens on http://127.0.0.1:8912/auth/callback
+    //   3. Returns { id_token } after code exchange
+    const { invoke } = await import('@tauri-apps/api/core');
+    const result = await invoke<{
+      id_token: string;
+      access_token: string;
+      email: string | null;
+      display_name: string | null;
+    }>('google_oauth_loopback', { googleClientId: GOOGLE_WEB_CLIENT_ID });
+    // Exchange Google id_token for Firebase credential
+    const credential = GoogleAuthProvider.credential(result.id_token);
+    const cred = await signInWithCredential(auth, credential);
+    const profile = await syncUserProfile(cred.user);
+    return { user: cred.user, profile };
   }
 
   // Standard browser — signInWithPopup works normally

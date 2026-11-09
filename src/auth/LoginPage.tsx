@@ -4,11 +4,6 @@
 import React, { useState } from "react";
 import { useAuth } from "./AuthContext";
 
-// Detect Tauri desktop WebView
-const isDesktop =
-  typeof window !== "undefined" &&
-  Boolean((window as any).__TAURI_INTERNALS__ || (window as any).__TAURI__);
-
 export const LoginPage: React.FC = () => {
   const { login, loginWithGoogle, setAuthView, error, clearError } = useAuth();
   const [email, setEmail] = useState("");
@@ -252,7 +247,7 @@ export const LoginPage: React.FC = () => {
             marginBottom: "16px",
           }}
         >
-          <span>🌐</span> {isDesktop ? "Sign in with Google (Web Only)" : "Sign in with Google"}
+          <span>🌐</span> Sign in with Google
         </button>
 
         <div style={{ textAlign: "center", fontSize: "0.85rem", color: "#9ca3af" }}>

@@ -1,4 +1,5 @@
 mod audio;
+mod auth;
 mod ffmpeg;
 mod ffmpeg_setup;
 mod image;
@@ -166,6 +167,7 @@ pub fn run() {
             youtube::youtube_get_channels,
             youtube::youtube_start_upload,
             youtube::youtube_query_analytics,
+            auth::google_oauth_loopback,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

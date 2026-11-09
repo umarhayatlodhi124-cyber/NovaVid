@@ -7,6 +7,7 @@ import {
   updateProject,
 } from "./lib/projects";
 import {
+  isSupportedProjectLanguage,
   normalizeProjectInput,
   PROJECT_LANGUAGES,
   type Project,
@@ -465,7 +466,7 @@ function App() {
         setView("analytics");
       } else if (e.ctrlKey && (e.key === "S" || e.key === "s") && !e.shiftKey) {
         e.preventDefault();
-        setQuickToast("âœ“ Project state synced to SQLite");
+        setQuickToast("✓ Project state synced to SQLite");
         setTimeout(() => setQuickToast(null), 2500);
       }
     }
@@ -879,7 +880,7 @@ function App() {
           </div>
           <div className="brand-copy">
             <strong>NovaVid AI Studio</strong>
-            <span>LODHI TECHX Â· v0.1.0</span>
+            <span>LODHI TECHX · v2.2.0</span>
           </div>
         </div>
 
@@ -942,7 +943,7 @@ function App() {
             <div className="phase-card-icon"><Icon name="spark" /></div>
             <strong>Production Suite</strong>
             <p>Gemini AI, YouTube Data API v3 &amp; FFmpeg rendering engine active.</p>
-            <small>LODHI TECHX Â· Release 0.1.0</small>
+            <small>LODHI TECHX · Release 2.2.0</small>
           </div>
           <div className="profile-row">
             <div className="profile-avatar">LX</div>
@@ -1060,7 +1061,7 @@ function App() {
               }}
               title="Manage or Install FFmpeg Engine"
             >
-              <span>ðŸŽ¬</span> <span style={{ opacity: 0.9 }}>FFmpeg Engine</span>
+              <span>🎬</span> <span style={{ opacity: 0.9 }}>FFmpeg Engine</span>
             </button>
             <button
               onClick={() => setIsBetaFeedbackOpen(true)}
@@ -1280,14 +1281,28 @@ function App() {
             />
           ) : view === "youtube_intelligence" ? (
             <YouTubeIntelligencePage
-              onSelectTopic={(topic) => {
-                saveProject({
-                  name: topic.title,
-                  topic: topic.title,
-                  language: topic.recommendedLanguage === "Urdu" ? "ur" : "en",
-                }, null).then(() => {
-                  setView("agent");
-                }).catch(() => undefined);
+              onSelectTopic={async (topic) => {
+                const chosenLang =
+                  isSupportedProjectLanguage(topic.recommendedLanguage)
+                    ? (topic.recommendedLanguage as ProjectLanguage)
+                    : topic.recommendedLanguage?.toLowerCase().includes("urdu")
+                      ? "Urdu"
+                      : "English";
+
+                setResearchTopic(topic.title);
+                setScriptTitle(topic.title);
+                setScriptLanguage(chosenLang);
+
+                try {
+                  await saveProject({
+                    name: topic.title,
+                    topic: topic.title,
+                    language: chosenLang,
+                  }, null);
+                } catch (err) {
+                  console.warn("Auto-save project fallback:", err);
+                }
+                setView("agent");
               }}
             />
           ) : view === "content_planner" ? (
@@ -1713,7 +1728,7 @@ function StoryboardStudioPage({
           <p>Convert an approved script into a scene-by-scene production plan with visual and audio guidance.</p>
         </div>
         <button className="button button-primary" disabled={generating} onClick={handleGenerate} type="button">
-          {generating ? "Generatingâ€¦" : "Generate storyboard"}
+          {generating ? "Generating…" : "Generate storyboard"}
         </button>
       </section>
 
@@ -1997,7 +2012,7 @@ function Dashboard({
           {storageState === "connecting" ? (
             <div className="inline-loading">
               <span className="spinner" />
-              <span>Connecting to your local workspaceâ€¦</span>
+              <span>Connecting to your local workspace…</span>
             </div>
           ) : storageState === "error" ? (
             <div className="projects-unavailable">
@@ -2008,8 +2023,8 @@ function Dashboard({
             <div className="empty-projects">
               <div className="empty-illustration">
                 <div className="empty-paper"><span /><span /><span /></div>
-                <div className="empty-sparkle sparkle-one">âœ³</div>
-                <div className="empty-sparkle sparkle-two">âœ¦</div>
+                <div className="empty-sparkle sparkle-one">✳</div>
+                <div className="empty-sparkle sparkle-two">✦</div>
               </div>
               <h3>Your next video starts here</h3>
               <p>Create a project to keep your topic, script, scenes, and assets together.</p>
@@ -2053,7 +2068,7 @@ function Dashboard({
       </section>
 
       <footer className="page-footer">
-        <span>NovaVid AI YouTube Studio <span className="footer-dot">Â·</span> LODHI TECHX v0.1.0 Commercial Production Suite</span>
+        <span>NovaVid AI YouTube Studio <span className="footer-dot">·</span> LODHI TECHX v2.2.0 Commercial Production Suite</span>
         <span>Empowering autonomous AI video production with Google Gemini &amp; FFmpeg</span>
       </footer>
     </>
@@ -2118,7 +2133,7 @@ function SettingsPage({
           )}
           {onNavigateToConnectionCenter && (
             <button className="button button-primary" onClick={onNavigateToConnectionCenter} type="button">
-              ðŸŒ Google & YouTube Center
+              🌐 Google & YouTube Center
             </button>
           )}
           <button className="button button-secondary" onClick={() => onChange(DEFAULT_SETTINGS)} type="button">
@@ -2157,7 +2172,7 @@ function SettingsPage({
         </div>
         {onNavigateToConnectionCenter && (
           <button className="button button-primary" onClick={onNavigateToConnectionCenter} type="button">
-            Open Connection Center â†—
+            Open Connection Center ↗
           </button>
         )}
       </div>
@@ -2323,8 +2338,8 @@ function MediaLibraryPage({
                     )}
                   </div>
                   <span>
-                    {asset.type} Â· {asset.size}
-                    {asset.width && asset.height ? ` Â· ${asset.width}Ã—${asset.height}` : ""}
+                    {asset.type} · {asset.size}
+                    {asset.width && asset.height ? ` · ${asset.width}×${asset.height}` : ""}
                   </span>
                   <div style={{ display: "flex", gap: "0.5rem", alignItems: "center", marginTop: "0.25rem" }}>
                     <small>{formatDate(asset.importedAt)}</small>
@@ -2444,7 +2459,7 @@ export function ProvidersPage({
             >
               {FALLBACK_GEMINI_CATALOG.map((m) => (
                 <option key={m.id} value={m.id}>
-                  {m.displayName} ({m.status.toUpperCase()}{m.supportsTts ? " Â· Text and Audio" : " Â· Text Only"})
+                  {m.displayName} ({m.status.toUpperCase()}{m.supportsTts ? " · Text and Audio" : " · Text Only"})
                 </option>
               ))}
             </select>
@@ -2463,7 +2478,7 @@ export function ProvidersPage({
 
           <div className="settings-field provider-meta">
             <span>Usage status</span>
-            <strong>{config.usage.requests} requests Â· {config.usage.estimatedCost}</strong>
+            <strong>{config.usage.requests} requests · {config.usage.estimatedCost}</strong>
             <small>{config.credentialConfigured ? "Credential stored securely in Windows Credential Manager" : "No credential configured"}</small>
             <small>{config.usage.lastUsed ? `Last used ${formatDate(config.usage.lastUsed)}` : "No usage yet"}</small>
           </div>
@@ -2471,7 +2486,7 @@ export function ProvidersPage({
 
         <div className="button-row">
           <button className="button button-primary" disabled={savingCredential || !credentialDraft.trim()} onClick={handleSaveCredential} type="button">
-            {savingCredential ? "Savingâ€¦" : config.credentialConfigured ? "Replace credential" : "Save credential securely"}
+            {savingCredential ? "Saving…" : config.credentialConfigured ? "Replace credential" : "Save credential securely"}
           </button>
           {config.credentialConfigured && (
             <button className="button button-secondary" onClick={handleRemoveCredential} type="button">Remove credential</button>
@@ -2497,7 +2512,7 @@ export function ProvidersPage({
               Reset
             </button>
             <button className="button button-primary" disabled={testing} onClick={handleTest} type="button">
-              {testing ? "Testingâ€¦" : "Test connection"}
+              {testing ? "Testing…" : "Test connection"}
             </button>
           </div>
         </div>
@@ -2577,7 +2592,7 @@ function ResearchPage({
 
           <div className="button-row">
             <button className="button button-primary" disabled={loading || !topic.trim()} onClick={handleGenerate} type="button">
-              {loading ? "Researchingâ€¦" : "Generate research"}
+              {loading ? "Researching…" : "Generate research"}
             </button>
           </div>
         </div>
@@ -2757,7 +2772,7 @@ function ScriptStudioPage({
 
           <div className="button-row">
             <button className="button button-primary" disabled={loading} onClick={handleGenerate} type="button">
-              {loading ? "Generatingâ€¦" : "Generate script"}
+              {loading ? "Generating…" : "Generate script"}
             </button>
           </div>
         </div>
@@ -2865,7 +2880,7 @@ function ProjectsPage({
           ) : storageState === "error" ? (
             <div className="projects-empty-state">
               <div className="empty-state-icon warning-icon"><Icon name="warning" /></div>
-              <h3>Projects arenâ€™t available right now</h3>
+              <h3>Projects aren't available right now</h3>
               <p>Connect to the desktop app to view and manage your local projects.</p>
             </div>
           ) : filteredProjects.length === 0 ? (
@@ -3068,7 +3083,7 @@ function ProjectDialog({
               <button className="button button-quiet" disabled={saving} onClick={onClose} type="button">Cancel</button>
               <button className="button button-primary" disabled={saving} type="submit">
                 {saving ? <span className="button-spinner" /> : <Icon name="check" />}
-                {saving ? "Savingâ€¦" : initialProject ? "Save changes" : "Create project"}
+                {saving ? "Saving…" : initialProject ? "Save changes" : "Create project"}
               </button>
             </div>
           </div>
@@ -3156,7 +3171,7 @@ function Icon({ name }: { name: string }) {
 }
 
 function metricValue(state: StorageState, value: number) {
-  return state === "ready" ? String(value).padStart(2, "0") : "â€”";
+  return state === "ready" ? String(value).padStart(2, "0") : "—";
 }
 
 function statusLabel(status: Project["status"]) {

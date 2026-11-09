@@ -48,6 +48,7 @@ export const YouTubeIntelligencePage: React.FC<YouTubeIntelligencePageProps> = (
   const [niche, setNiche] = useState("technology");
   const [language, setLanguage] = useState("Urdu");
   const [region, setRegion] = useState("Pakistan");
+  const [generatingTopicId, setGeneratingTopicId] = useState<string | null>(null);
   const [competitorInput, setCompetitorInput] = useState("");
   const [competitors, setCompetitors] = useState<string[]>([]);
   const [session, setSession] = useState<IntelligenceSession | null>(null);
@@ -336,10 +337,14 @@ export const YouTubeIntelligencePage: React.FC<YouTubeIntelligencePageProps> = (
                         <div className="flex flex-wrap gap-2 pt-1">
                           <button
                             type="button"
-                            onClick={() => onSelectTopic?.(topic)}
-                            className="px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold transition-all"
+                            disabled={generatingTopicId === topic.id}
+                            onClick={() => {
+                              setGeneratingTopicId(topic.id);
+                              onSelectTopic?.(topic);
+                            }}
+                            className="px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 disabled:opacity-75 text-white text-xs font-semibold transition-all flex items-center gap-1.5 shadow-sm shadow-blue-500/20"
                           >
-                            🎬 Generate Full Video
+                            {generatingTopicId === topic.id ? "⚡ Opening Studio..." : "🎬 Generate Full Video"}
                           </button>
                           <button
                             type="button"
