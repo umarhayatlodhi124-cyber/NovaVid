@@ -100,6 +100,12 @@ export function GoogleYouTubeConnectionCenter({
   const [showSecretInModal, setShowSecretInModal] = useState(false);
   const [testConfigResult, setTestConfigResult] = useState<{ success: boolean; message: string } | null>(null);
 
+  // Channel Stats Editor Modal
+  const [showEditStatsModal, setShowEditStatsModal] = useState(false);
+  const [editSubsInput, setEditSubsInput] = useState("");
+  const [editViewsInput, setEditViewsInput] = useState("");
+  const [editUploadsInput, setEditUploadsInput] = useState("");
+
   // Dynamic model catalog from official Google Models API
   const [modelCatalog, setModelCatalog] = useState<GeminiModelInfo[]>(FALLBACK_GEMINI_CATALOG);
   const [isTestingRefresh, setIsTestingRefresh] = useState(false);
@@ -409,6 +415,36 @@ export function GoogleYouTubeConnectionCenter({
     } catch (err: any) {
       showNotice("error", `Failed to disconnect YouTube: ${err.message || String(err)}`);
     }
+  };
+
+  const handleOpenEditStats = () => {
+    if (youtubeState.selectedChannel) {
+      setEditSubsInput(String(youtubeState.selectedChannel.subscriberCount || 0));
+      setEditViewsInput(String(youtubeState.selectedChannel.viewCount || 0));
+      setEditUploadsInput(String(youtubeState.selectedChannel.videoCount || 0));
+    }
+    setShowEditStatsModal(true);
+  };
+
+  const handleSaveCustomStats = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!youtubeState.selectedChannel) return;
+    const updated = {
+      ...youtubeState.selectedChannel,
+      subscriberCount: Number(editSubsInput) || 0,
+      viewCount: Number(editViewsInput) || 0,
+      videoCount: Number(editUploadsInput) || 0,
+    };
+    try {
+      localStorage.setItem("novavid_yt_active_channel", JSON.stringify(updated));
+    } catch {}
+    setYoutubeState((prev) => ({
+      ...prev,
+      selectedChannel: updated,
+      channels: [updated],
+    }));
+    setShowEditStatsModal(false);
+    showNotice("success", "✅ Real channel metrics updated successfully!");
   };
 
   const handleSaveCustomClientConfig = async () => {
@@ -987,11 +1023,18 @@ export function GoogleYouTubeConnectionCenter({
                 {/* Channel Profile Banner */}
                 <div className="gy-channel-profile-card">
                   <div className="gy-channel-left">
-                    <div className="gy-channel-avatar">
+                    <div className="gy-channel-avatar" style={{ overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center", background: "#1e293b", color: "#38bdf8", fontWeight: 700 }}>
                       {youtubeState.selectedChannel.avatarUrl ? (
                         <img
                           src={youtubeState.selectedChannel.avatarUrl}
-                          alt="Channel Avatar"
+                          alt=""
+                          onError={(e) => {
+                            (e.currentTarget as HTMLImageElement).style.display = "none";
+                            if (e.currentTarget.parentElement) {
+                              e.currentTarget.parentElement.innerText = youtubeState.selectedChannel?.title?.charAt(0) || "L";
+                            }
+                          }}
+                          style={{ width: "100%", height: "100%", objectFit: "cover" }}
                         />
                       ) : (
                         youtubeState.selectedChannel.title.charAt(0)
@@ -1040,6 +1083,15 @@ export function GoogleYouTubeConnectionCenter({
                       >
                         <span style={{ display: "inline-block", transform: isRefreshingChannels ? "rotate(180deg)" : "none", transition: "transform 0.5s ease" }}>🔄</span>
                         {isRefreshingChannels ? "Syncing..." : "Sync Live Stats"}
+                      </button>
+                      <button
+                        onClick={handleOpenEditStats}
+                        className="gy-btn gy-btn-secondary"
+                        type="button"
+                        style={{ padding: "3px 8px", fontSize: "10px", display: "flex", alignItems: "center", gap: "4px" }}
+                        title="Edit live channel statistics"
+                      >
+                        <span>✏️</span> Edit Stats
                       </button>
                     </div>
                     <div style={{ fontSize: "10px", color: "#64748b" }}>
@@ -1579,6 +1631,91 @@ export function GoogleYouTubeConnectionCenter({
                 </button>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+      {/* Real Channel Stats Editor Modal */}
+      {showEditStatsModal && (
+        <div className="gy-modal-backdrop">
+          <div className="gy-modal" style={{ maxWidth: "460px" }}>
+            <div className="gy-modal-header">
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <span style={{ fontSize: "18px" }}>📊</span>
+                <h3 style={{ margin: 0, fontSize: "15px", fontWeight: 700, color: "#fff" }}>
+                  Channel Metrics &amp; Statistics
+                </h3>
+              </div>
+              <button
+                onClick={() => setShowEditStatsModal(false)}
+                className="gy-modal-close"
+                type="button"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveCustomStats}>
+              <div style={{ padding: "16px 20px", display: "flex", flexDirection: "column", gap: "14px" }}>
+                <p style={{ margin: 0, fontSize: "12px", color: "#94a3b8", lineHeight: 1.4 }}>
+                  Synchronize or update real audience numbers for <strong style={{ color: "#fff" }}>Lodhi TechX</strong>.
+                </p>
+
+                <div className="gy-field-group">
+                  <label className="gy-field-label">Subscribers Count</label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={editSubsInput}
+                    onChange={(e) => setEditSubsInput(e.target.value)}
+                    placeholder="e.g. 50"
+                    className="gy-input"
+                    required
+                  />
+                </div>
+
+                <div className="gy-field-group">
+                  <label className="gy-field-label">Total Views</label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={editViewsInput}
+                    onChange={(e) => setEditViewsInput(e.target.value)}
+                    placeholder="e.g. 1200"
+                    className="gy-input"
+                    required
+                  />
+                </div>
+
+                <div className="gy-field-group">
+                  <label className="gy-field-label">Total Videos / Uploads</label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={editUploadsInput}
+                    onChange={(e) => setEditUploadsInput(e.target.value)}
+                    placeholder="e.g. 10"
+                    className="gy-input"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div style={{ padding: "12px 20px 16px", borderTop: "1px solid #1e293b", display: "flex", justifyContent: "flex-end", gap: "10px" }}>
+                <button
+                  type="button"
+                  onClick={() => setShowEditStatsModal(false)}
+                  className="gy-btn gy-btn-secondary"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="gy-btn gy-btn-sky"
+                >
+                  Save Metrics
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

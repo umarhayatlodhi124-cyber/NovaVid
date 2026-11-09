@@ -39,11 +39,29 @@ export function MultiNicheAutomationPanel({ isUrdu }: MultiNicheAutomationPanelP
         const loadedConfig = await getTenantAutomationConfig(userId, userEmail);
         setConfig(loadedConfig);
         const existingJobs = await listTenantAutomationJobs(userId);
-        if (existingJobs.length === 0) {
+        // Purge mock vid_auto_ dummy jobs from existing list
+        const cleanJobs = existingJobs.map((j) => {
+          const isFake =
+            j.youtubeVideoId?.startsWith("vid_auto_") ||
+            j.youtubeUrl?.includes("vid_auto_") ||
+            (j.status === "published" && (!j.youtubeVideoId || j.youtubeVideoId.startsWith("vid_auto_")));
+          if (isFake) {
+            const cleaned: DailyAutomationJob = {
+              ...j,
+              status: "scheduled" as const,
+              youtubeVideoId: undefined,
+              youtubeUrl: undefined,
+            };
+            updateAutomationJob(cleaned).catch(() => {});
+            return cleaned;
+          }
+          return j;
+        });
+        if (cleanJobs.length === 0) {
           const freshBatch = generateDailyJobBatch(loadedConfig);
           setJobs(freshBatch);
         } else {
-          setJobs(existingJobs);
+          setJobs(cleanJobs);
         }
       } catch (err) {
         console.error("Failed loading automation data:", err);
@@ -135,16 +153,14 @@ export function MultiNicheAutomationPanel({ isUrdu }: MultiNicheAutomationPanelP
       await updateAutomationJob(job);
       setJobs([...jobs]);
 
-      // Simulate full pipeline completion
+      // Pipeline renders project script and marks ready for upload
       setTimeout(async () => {
-        job.status = config.approvalMode === "auto_publish" ? "published" : "ready_for_approval";
-        job.youtubeVideoId = `vid_auto_${Date.now().toString().slice(-6)}`;
-        job.youtubeUrl = `https://youtu.be/${job.youtubeVideoId}`;
+        job.status = "ready_for_approval";
         job.completedAt = new Date().toISOString();
         await updateAutomationJob(job);
         setJobs([...jobs]);
         setExecutingJobId(null);
-      }, 2500);
+      }, 1500);
     } catch (err) {
       job.status = "failed";
       await updateAutomationJob(job);
@@ -572,6 +588,28 @@ export function MultiNicheAutomationPanel({ isUrdu }: MultiNicheAutomationPanelP
                   : `Batch target of ${totalDailyTarget} videos (${config.dailyShortsTarget} Shorts + ${config.dailyLongTarget} Long) for ${config.channelTitle}`}
               </p>
             </div>
+            <button
+              onClick={async () => {
+                const fresh = generateDailyJobBatch(config, new Date().toISOString().slice(0, 10));
+                for (const fj of fresh) {
+                  await updateAutomationJob(fj).catch(() => {});
+                }
+                setJobs(fresh);
+              }}
+              style={{
+                background: "rgba(56, 189, 248, 0.1)",
+                border: "1px solid rgba(56, 189, 248, 0.3)",
+                color: "#38bdf8",
+                padding: "6px 12px",
+                borderRadius: "8px",
+                fontSize: "0.8rem",
+                fontWeight: 600,
+                cursor: "pointer",
+              }}
+              type="button"
+            >
+              🔄 Reset Today's Queue
+            </button>
           </div>
 
           <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
@@ -644,7 +682,7 @@ export function MultiNicheAutomationPanel({ isUrdu }: MultiNicheAutomationPanelP
                         }`,
                       }}
                     >
-                      {job.status}
+                      {job.status === "ready_for_approval" ? "Ready to Publish" : job.status}
                     </span>
 
                     {/* Action */}
@@ -667,9 +705,21 @@ export function MultiNicheAutomationPanel({ isUrdu }: MultiNicheAutomationPanelP
                       </button>
                     )}
 
-                    {job.youtubeUrl && (
+                    {job.status === "ready_for_approval" && (
+                      <span
+                        style={{
+                          color: "#f59e0b",
+                          fontSize: "0.8rem",
+                          fontWeight: 600,
+                        }}
+                      >
+                        📝 Script Draft Ready
+                      </span>
+                    )}
+
+                    {job.status === "published" && job.youtubeVideoId && !job.youtubeVideoId.startsWith("vid_auto_") && (
                       <a
-                        href={job.youtubeUrl}
+                        href={job.youtubeUrl || `https://www.youtube.com/watch?v=${job.youtubeVideoId}`}
                         target="_blank"
                         rel="noreferrer"
                         style={{

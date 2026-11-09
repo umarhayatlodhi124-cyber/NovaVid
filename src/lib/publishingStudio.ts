@@ -79,14 +79,15 @@ export const DEFAULT_REDIRECT_URI = "http://127.0.0.1:8911/oauth2callback";
 
 export const DEFAULT_LODHI_CHANNEL: YouTubeChannelInfo = {
   id: "chan_lodhi_techx",
-  channelId: "UC_LodhiTechX",
+  channelId: "UCL1USyVzIikDT-K1OIg69_w",
   title: "Lodhi TechX",
-  customUrl: "@LodhitechX",
-  avatarUrl: "https://yt3.googleusercontent.com/ytc/AIdro_k-vB7w0h2Gj7T3V1c_channel_avatar=s176-c-k-c0x00ffffff-no-rj",
-  subscriberCount: 28400,
-  videoCount: 145,
+  customUrl: "@LodhiTechX",
+  avatarUrl: "https://yt3.googleusercontent.com/JNr3tSFmV-r_sNNa_kHdXgHyjlsB0NuWQJLvIReCs5QA7E2DfsrrxsMvfeFMI7FP7MVpWpUJQg=s900-c-k-c0x00ffffff-no-rj",
+  subscriberCount: 0,
+  videoCount: 0,
   isActive: true,
-  viewCount: 685000,
+  viewCount: 0,
+  publishedAt: "2024-05-01T00:00:00Z",
 };
 
 export async function youtubeGetAuthUrl(
@@ -113,7 +114,32 @@ export async function youtubeGetAuthState(): Promise<YouTubeAuthState> {
   let cachedChannel: YouTubeChannelInfo | null = null;
   try {
     const raw = localStorage.getItem("novavid_yt_active_channel");
-    if (raw) cachedChannel = JSON.parse(raw);
+    if (raw) {
+      cachedChannel = JSON.parse(raw);
+      // Auto-migrate stale mock cache or broken avatar from older test runs
+      if (
+        cachedChannel &&
+        (cachedChannel.channelId === "UC_LodhiTechX" ||
+          cachedChannel.subscriberCount === 28400 ||
+          cachedChannel.avatarUrl?.includes("AIdro_k-vB7w0h2Gj7T3V1c_channel_avatar"))
+      ) {
+        cachedChannel = {
+          ...DEFAULT_LODHI_CHANNEL,
+          ...cachedChannel,
+          channelId: "UCL1USyVzIikDT-K1OIg69_w",
+          customUrl: "@LodhiTechX",
+          avatarUrl: DEFAULT_LODHI_CHANNEL.avatarUrl,
+        };
+        if (cachedChannel.subscriberCount === 28400 && cachedChannel.viewCount === 685000) {
+          cachedChannel.subscriberCount = 0;
+          cachedChannel.viewCount = 0;
+          cachedChannel.videoCount = 0;
+        }
+        try {
+          localStorage.setItem("novavid_yt_active_channel", JSON.stringify(cachedChannel));
+        } catch {}
+      }
+    }
   } catch {}
 
   const activeChannel = cachedChannel || DEFAULT_LODHI_CHANNEL;
