@@ -129,10 +129,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const loginWithGoogle = async () => {
     setError(null);
     try {
-      const isDesktop = typeof window !== "undefined" && Boolean((window as any).__TAURI_INTERNALS__ || (window as any).__TAURI__);
-      if (isDesktop) {
-        throw new Error("Google sign-in popup is not supported in the desktop app. Please sign in with your email address and password above.");
-      }
       const res = await loginWithGoogleAuth();
       setUser(res.user);
       setProfile(res.profile);
@@ -140,8 +136,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } catch (err: any) {
       console.error("Google sign in failed:", err);
       let msg = err?.message || "Google sign in failed.";
-      if (err?.code === "auth/argument-error" || msg.includes("auth/argument-error") || msg.includes("disallowed_useragent") || err?.code === "auth/popup-blocked") {
-        msg = "Google sign-in is not supported in desktop mode. Please sign in with your email address and password above.";
+      if (err?.code === "auth/popup-closed-by-user") {
+        msg = "Sign in window was closed. Please try again.";
+      } else if (err?.code === "auth/popup-blocked") {
+        msg = "Sign in popup was blocked. Please allow popups or reset your password to sign in with email.";
       }
       setError(msg);
       throw new Error(msg);

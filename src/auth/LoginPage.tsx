@@ -11,8 +11,6 @@ export const LoginPage: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [localError, setLocalError] = useState<string | null>(null);
 
-  const isDesktop = typeof window !== "undefined" && Boolean((window as any).__TAURI_INTERNALS__ || (window as any).__TAURI__);
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLocalError(null);
@@ -270,18 +268,11 @@ export const LoginPage: React.FC = () => {
             alignItems: "center",
             justifyContent: "center",
             gap: "10px",
-            marginBottom: "12px",
-            opacity: isDesktop ? 0.7 : 1,
+            marginBottom: "16px",
           }}
         >
-          <span>🌐</span> Sign in with Google {isDesktop && "(Web Only)"}
+          <span>🌐</span> Sign in with Google
         </button>
-
-        {isDesktop && (
-          <p style={{ textAlign: "center", fontSize: "0.75rem", color: "#6b7280", margin: "0 0 16px" }}>
-            Desktop Note: Please use Email & Password above to sign into your desktop workspace.
-          </p>
-        )}
 
         <div style={{ textAlign: "center", fontSize: "0.85rem", color: "#9ca3af" }}>
           Don't have an account?{" "}
