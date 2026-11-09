@@ -18,8 +18,6 @@ import { auth, db } from "../lib/firebase";
 import { isTauriEnvironment } from "../lib/platformStorage";
 import type { UserProfile, UserRole, SubscriptionPlan } from "./AuthContext";
 
-// Google OAuth2 Web Client ID for desktop loopback sign-in
-const GOOGLE_WEB_CLIENT_ID =
   (import.meta.env.VITE_GOOGLE_OAUTH_CLIENT_ID as string) ||
   "566848341353-auto.apps.googleusercontent.com";
 
@@ -107,24 +105,33 @@ export async function loginWithGoogleAuth(): Promise<{ user: User; profile: User
   provider.setCustomParameters({ prompt: "select_account" });
 
   if (isTauriEnvironment()) {
-    // Desktop: use system-browser OAuth2 loopback (port 8912) instead of WebView2 popup.
-    // WebView2 is flagged as disallowed_useragent by Google so signInWithPopup always fails.
-    // Calls the Rust 'google_oauth_loopback' Tauri command which:
-    //   1. Opens system Chrome/Edge with Google OAuth URL
-    //   2. Listens on http://127.0.0.1:8912/auth/callback
-    //   3. Returns { id_token } after code exchange
-    const { invoke } = await import('@tauri-apps/api/core');
-    const result = await invoke<{
-      id_token: string;
-      access_token: string;
-      email: string | null;
-      display_name: string | null;
-    }>('google_oauth_loopback', { googleClientId: GOOGLE_WEB_CLIENT_ID });
-    // Exchange Google id_token for Firebase credential
-    const credential = GoogleAuthProvider.credential(result.id_token);
-    const cred = await signInWithCredential(auth, credential);
-    const profile = await syncUserProfile(cred.user);
-    return { user: cred.user, profile };
+    const configuredClientId =
+      (import.meta.env.VITE_GOOGLE_OAUTH_CLIENT_ID as string) || "";
+    const isValidClientId =
+      configuredClientId &&
+      !configuredClientId.includes("auto") &&
+      !configuredClientId.includes("xxxx");
+
+    if (isValidClientId) {
+      const { invoke } = await import('@tauri-apps/api/core');
+      const result = await invoke<{
+        id_token: string;
+        access_token: string;
+        email: string | null;
+        display_name: string | null;
+      }>('google_oauth_loopback', { googleClientId: configuredClientId });
+      const credential = GoogleAuthProvider.credential(result.id_token);
+      const cred = await signInWithCredential(auth, credential);
+      const profile = await syncUserProfile(cred.user);
+      return { user: cred.user, profile };
+    } else {
+      throw Object.assign(
+        new Error(
+          "Google Sign-In is active on the Web App (https://novavid-ecfc8.web.app). For the Desktop app, please sign in with your Email & Password. If you don't have a password yet, click 'Forgot password?' to set one."
+        ),
+        { code: "auth/desktop-google-notice" }
+      );
+    }
   }
 
   // Standard browser — signInWithPopup works normally

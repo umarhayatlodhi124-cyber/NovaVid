@@ -69,7 +69,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const login = async (email: string, pass: string) => {
     setError(null);
     try {
-      const res = await loginWithEmailAuth(email, pass);
+      const loginPromise = loginWithEmailAuth(email, pass);
+      const timeoutPromise = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error("Login timed out. Please check your internet connection and try again.")), 12000)
+      );
+      const res = await Promise.race([loginPromise, timeoutPromise]);
       setUser(res.user);
       setProfile(res.profile);
       const isOwner = isPermanentOwner(res.user.email);
@@ -82,18 +86,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } catch (err: any) {
       console.error("Login failed:", err);
       let msg = err?.message || "Login failed.";
-      if (err?.code === "auth/invalid-credential" || err?.code === "auth/wrong-password") {
-        msg = "Invalid email or password. Please verify and try again.";
-      } else if (err?.code === "auth/user-not-found") {
-        msg = "No account found with this email. Please click 'Create an Account' below to sign up.";
-      } else if (err?.code === "auth/too-many-requests") {
+      const lower = (msg + " " + (err?.code || "")).toLowerCase();
+      if (
+        err?.code === "auth/invalid-credential" ||
+        err?.code === "auth/wrong-password" ||
+        err?.code === "auth/user-not-found" ||
+        lower.includes("invalid_login_credentials") ||
+        lower.includes("invalid-credential") ||
+        lower.includes("wrong-password")
+      ) {
+        msg = "❌ Invalid email or password. If you originally signed in with Google, click 'Forgot password?' below to set your account password.";
+      } else if (err?.code === "auth/too-many-requests" || lower.includes("too-many-requests")) {
         msg = "Access temporarily blocked due to multiple failed attempts. Try again later or reset password.";
-      } else if (err?.code === "auth/internal-error" || msg.includes("auth/internal-error")) {
-        msg = "Invalid email or password. If you don't have an account yet, click 'Create an Account' below to sign up.";
-      } else if (err?.code === "auth/argument-error" || msg.includes("auth/argument-error") || err?.code === "auth/invalid-email") {
-        msg = "Invalid email format or empty field. Please enter a valid email and password.";
-      } else if (err?.code === "auth/network-request-failed") {
-        msg = "Network connection failed. Please check your internet connection and try again.";
+      } else if (err?.code === "auth/internal-error" || lower.includes("internal-error")) {
+        msg = "❌ Invalid email or password. Please verify and try again.";
+      } else if (err?.code === "auth/argument-error" || lower.includes("argument-error") || err?.code === "auth/invalid-email") {
+        msg = "Please enter a valid email address and password.";
+      } else if (err?.code === "auth/network-request-failed" || lower.includes("network")) {
+        msg = "Network connection failed. Please check your internet connection.";
       }
       setError(msg);
       throw new Error(msg);

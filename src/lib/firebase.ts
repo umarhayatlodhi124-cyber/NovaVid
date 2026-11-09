@@ -7,7 +7,6 @@ import {
   getAuth,
   initializeAuth,
   browserLocalPersistence,
-  indexedDBLocalPersistence,
   inMemoryPersistence,
   browserPopupRedirectResolver,
   signInWithEmailAndPassword,
@@ -69,11 +68,8 @@ function initializeFirebaseAuth(): Auth {
   try {
     const isBrowser = isRealBrowser();
     return initializeAuth(app, {
-      persistence: isBrowser
-        ? [browserLocalPersistence, indexedDBLocalPersistence, inMemoryPersistence]
-        : [indexedDBLocalPersistence, inMemoryPersistence],
-      // Only pass browserPopupRedirectResolver in real browser environments
-      // Avoid in Tauri WebView2 and Node.js/Vitest test runners
+      // browserLocalPersistence (localStorage) works synchronously in both desktop WebView2 and web browsers
+      persistence: [browserLocalPersistence, inMemoryPersistence],
       popupRedirectResolver: isBrowser ? browserPopupRedirectResolver : undefined,
     });
   } catch {
