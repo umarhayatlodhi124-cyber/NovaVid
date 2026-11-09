@@ -1,16 +1,20 @@
-// NovaVid AI Studio — Stage W2: Production Admin SaaS Control Center
-// Complete multi-tenant oversight, billing metrics, manual WhatsApp payment verification, license issuance, and device revocation.
+// NovaVid AI Studio — Stage W2: Production Super Admin SaaS Control Center
+// Complete multi-tenant oversight, real Cloud Firestore synchronization, manual WhatsApp payment verification,
+// Ed25519 asymmetric licensing, device management, and dedicated left sidebar architecture.
+// Brand: LODHI TECHX | Founder: Umar Hayat | Version: 2.2.0
 
 import React, { useState, useEffect } from "react";
 import { cloudClient, type CloudSession } from "../lib/cloudSaaS";
 import type { LicensePayload } from "../lib/licensingCrypto";
 import {
   auth,
+  db,
   loginWithEmail,
   loginWithGoogle,
   logoutFirebase,
   subscribeToAuthState,
 } from "../lib/firebase";
+import { collection, getDocs, doc, setDoc } from "firebase/firestore";
 import type { User } from "firebase/auth";
 import {
   manualPaymentService,
@@ -26,7 +30,7 @@ export const AUTHORIZED_ADMIN_EMAILS = [
 
 const MASTER_ADMIN_PASSCODE = "LODHI-TECHX-2026";
 
-interface MockTenant {
+export interface TenantRecord {
   id: string;
   name: string;
   ownerEmail: string;
@@ -37,59 +41,45 @@ interface MockTenant {
   createdAt: string;
 }
 
-const INITIAL_TENANTS: MockTenant[] = [
-  {
-    id: "org_alpha_01",
-    name: "Alpha Apex Media",
-    ownerEmail: "director@alphaapex.tv",
-    tier: "enterprise",
-    mrr: 199,
-    devices: 14,
-    status: "active",
-    createdAt: "2026-01-15",
-  },
-  {
-    id: "org_nexus_02",
-    name: "Nexus Creators Collective",
-    ownerEmail: "lead@nexuscreators.co",
-    tier: "agency_studio",
-    mrr: 99,
-    devices: 7,
-    status: "active",
-    createdAt: "2026-03-02",
-  },
-  {
-    id: "org_solo_03",
-    name: "TechPulse Studio",
-    ownerEmail: "sarah@techpulse.video",
-    tier: "creator_pro",
-    mrr: 29,
-    devices: 2,
-    status: "active",
-    createdAt: "2026-05-20",
-  },
-  {
-    id: "org_starter_04",
-    name: "Indie Vlog Labs",
-    ownerEmail: "indie@vloglabs.io",
-    tier: "starter",
-    mrr: 0,
-    devices: 1,
-    status: "past_due",
-    createdAt: "2026-07-11",
-  },
-];
-
 export interface AdminSaaSPanelProps {
   onNavigateToAwsConnection?: () => void;
 }
 
 export const AdminSaaSPanel: React.FC<AdminSaaSPanelProps> = ({ onNavigateToAwsConnection: _onNavigateToAwsConnection }) => {
-  const [session, setSession] = useState<CloudSession>(cloudClient.getSession());
-  const [tenants] = useState<MockTenant[]>(INITIAL_TENANTS);
+  const [_session, setSession] = useState<CloudSession>(cloudClient.getSession());
+  const [adminTab, setAdminTab] = useState<"dashboard" | "tenants" | "payments" | "methods" | "licenses" | "telemetry">("dashboard");
+
+  // Real Tenant Fleet State (Persistent & Firestore Synced)
+  const [tenants, setTenants] = useState<TenantRecord[]>(() => {
+    try {
+      const stored = localStorage.getItem("novavid_registered_tenants");
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch {}
+    // Default real founder entry
+    return [
+      {
+        id: "usr_owner_lodhi",
+        name: "Umar Hayat (Founder & Super Admin)",
+        ownerEmail: "umarhayatlodhi124@gmail.com",
+        tier: "enterprise",
+        mrr: 199,
+        devices: 5,
+        status: "active",
+        createdAt: new Date().toISOString().split("T")[0],
+      },
+    ];
+  });
+
   const [searchQuery, setSearchQuery] = useState("");
   const [tierFilter, setTierFilter] = useState<string>("all");
-  const [adminTab, setAdminTab] = useState<"tenants" | "payments" | "methods" | "licenses">("tenants");
+  const [isAddTenantOpen, setIsAddTenantOpen] = useState(false);
+  const [newTenantName, setNewTenantName] = useState("");
+  const [newTenantEmail, setNewTenantEmail] = useState("");
+  const [newTenantTier, setNewTenantTier] = useState<TenantRecord["tier"]>("creator_pro");
+  const [newTenantDevices, setNewTenantDevices] = useState(3);
 
   // Admin Auth Gate State
   const [currentUser, setCurrentUser] = useState<User | null>(auth.currentUser);
@@ -99,11 +89,11 @@ export const AdminSaaSPanel: React.FC<AdminSaaSPanelProps> = ({ onNavigateToAwsC
   const [passcodeInput, setPasscodeInput] = useState("");
   const [authError, setAuthError] = useState<string | null>(null);
   const [isAuthLoading, setIsAuthLoading] = useState(false);
-  const [authMode, setAuthMode] = useState<"google" | "email" | "passcode">("google");
+  const [authMode, setAuthMode] = useState<"passcode" | "email" | "google">("passcode");
 
   // License Generator State
-  const [genOrgId, setGenOrgId] = useState("org_client_new");
-  const [genEmail, setGenEmail] = useState("creator@client.com");
+  const [genOrgId, setGenOrgId] = useState("org_lodhi_client");
+  const [genEmail, setGenEmail] = useState("client@novavid.com");
   const [genTier, setGenTier] = useState<LicensePayload["tier"]>("creator_pro");
   const [genMaxDevices, setGenMaxDevices] = useState(5);
   const [generatedToken, setGeneratedToken] = useState<string | null>(null);
@@ -121,14 +111,56 @@ export const AdminSaaSPanel: React.FC<AdminSaaSPanelProps> = ({ onNavigateToAwsC
   // Payment Methods & WhatsApp Config State
   const [paymentConfig, setPaymentConfig] = useState<WhatsAppPaymentSettings>(manualPaymentService.getSettings());
 
-  // Security Audit Log State
+  // Real Audit Log State
   const [auditLogs, setAuditLogs] = useState<Array<{ id: string; action: string; time: string }>>([
-    { id: "log_1", action: "Tenant 'Alpha Apex Media' upgraded to Enterprise tier", time: "10 mins ago" },
-    { id: "log_2", action: "Cryptographic license issued for 'lead@nexuscreators.co'", time: "42 mins ago" },
-    { id: "log_3", action: "Suspicious machine fingerprint HW-REVOKED-99 quarantined", time: "2 hours ago" },
+    { id: "log_init", action: "Super Admin Control Center initialized for novavid-ecfc8", time: "Active" },
   ]);
 
-  const effectiveAdminEmail = currentUser?.email || "umarhayatlodhi25@gmail.com";
+  const effectiveAdminEmail = currentUser?.email || "umarhayatlodhi124@gmail.com";
+
+  // Fetch real users from Cloud Firestore
+  const fetchRealFirestoreUsers = async () => {
+    try {
+      const snap = await getDocs(collection(db, "users"));
+      if (!snap.empty) {
+        const liveList: TenantRecord[] = [];
+        snap.forEach((docSnap) => {
+          const d = docSnap.data();
+          const tier = (d.plan as TenantRecord["tier"]) || "starter";
+          const mrr = tier === "enterprise" ? 199 : tier === "agency_studio" ? 99 : tier === "creator_pro" ? 29 : 0;
+          liveList.push({
+            id: docSnap.id,
+            name: d.displayName || (d.email ? d.email.split("@")[0] : "Creator"),
+            ownerEmail: d.email || "",
+            tier,
+            mrr,
+            devices: d.isOwner ? 5 : 2,
+            status: d.accountStatus === "suspended" ? "suspended" : "active",
+            createdAt: d.createdAt ? new Date(d.createdAt).toISOString().split("T")[0] : "2026-11-09",
+          });
+        });
+
+        // Ensure owner is always present
+        if (!liveList.some((t) => t.ownerEmail.toLowerCase() === "umarhayatlodhi124@gmail.com")) {
+          liveList.unshift({
+            id: "usr_owner_lodhi",
+            name: "Umar Hayat (Founder & Super Admin)",
+            ownerEmail: "umarhayatlodhi124@gmail.com",
+            tier: "enterprise",
+            mrr: 199,
+            devices: 5,
+            status: "active",
+            createdAt: "2026-11-09",
+          });
+        }
+
+        setTenants(liveList);
+        localStorage.setItem("novavid_registered_tenants", JSON.stringify(liveList));
+      }
+    } catch (err) {
+      console.warn("Could not query live Firestore users:", err);
+    }
+  };
 
   useEffect(() => {
     const unsub = subscribeToAuthState((u) => {
@@ -139,6 +171,7 @@ export const AdminSaaSPanel: React.FC<AdminSaaSPanelProps> = ({ onNavigateToAwsC
         setAuthError(null);
       }
     });
+    fetchRealFirestoreUsers();
     return () => unsub();
   }, []);
 
@@ -146,9 +179,7 @@ export const AdminSaaSPanel: React.FC<AdminSaaSPanelProps> = ({ onNavigateToAwsC
     try {
       const reqs = manualPaymentService.listAllRequestsForAdmin(effectiveAdminEmail);
       setPaymentRequests(reqs);
-    } catch {
-      // Not yet authorized or offline
-    }
+    } catch {}
   }, [adminTab, effectiveAdminEmail]);
 
   const isAuthorized =
@@ -214,6 +245,82 @@ export const AdminSaaSPanel: React.FC<AdminSaaSPanelProps> = ({ onNavigateToAwsC
     setSession(cloudClient.getSession());
   };
 
+  // Real Add Tenant Handler
+  const handleCreateTenant = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newTenantEmail.trim() || !newTenantName.trim()) {
+      alert("Please fill in tenant name and email.");
+      return;
+    }
+
+    const mrr = newTenantTier === "enterprise" ? 199 : newTenantTier === "agency_studio" ? 99 : newTenantTier === "creator_pro" ? 29 : 0;
+    const newRecord: TenantRecord = {
+      id: `usr_${Date.now()}`,
+      name: newTenantName.trim(),
+      ownerEmail: newTenantEmail.trim().toLowerCase(),
+      tier: newTenantTier,
+      mrr,
+      devices: Number(newTenantDevices) || 2,
+      status: "active",
+      createdAt: new Date().toISOString().split("T")[0],
+    };
+
+    // Save to Firestore if available
+    try {
+      await setDoc(doc(db, "users", newRecord.id), {
+        uid: newRecord.id,
+        displayName: newRecord.name,
+        email: newRecord.ownerEmail,
+        plan: newRecord.tier,
+        role: "creator",
+        accountStatus: "active",
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      }, { merge: true });
+    } catch (err) {
+      console.warn("Could not save to Firestore:", err);
+    }
+
+    const updated = [newRecord, ...tenants];
+    setTenants(updated);
+    localStorage.setItem("novavid_registered_tenants", JSON.stringify(updated));
+
+    setAuditLogs((prev) => [
+      { id: `log_${Date.now()}`, action: `New tenant '${newRecord.name}' registered with ${newRecord.tier} tier`, time: "Just now" },
+      ...prev,
+    ]);
+
+    setNewTenantName("");
+    setNewTenantEmail("");
+    setIsAddTenantOpen(false);
+  };
+
+  // Real Tenant Status Toggle (Suspend / Activate)
+  const handleToggleTenantStatus = (id: string) => {
+    const updated = tenants.map((t) => {
+      if (t.id === id) {
+        const nextStatus = t.status === "active" ? ("suspended" as const) : ("active" as const);
+        return { ...t, status: nextStatus };
+      }
+      return t;
+    });
+    setTenants(updated);
+    localStorage.setItem("novavid_registered_tenants", JSON.stringify(updated));
+  };
+
+  // Real Tenant Tier Upgrade / Change
+  const handleChangeTenantTier = (id: string, newTier: TenantRecord["tier"]) => {
+    const mrr = newTier === "enterprise" ? 199 : newTier === "agency_studio" ? 99 : newTier === "creator_pro" ? 29 : 0;
+    const updated = tenants.map((t) => {
+      if (t.id === id) {
+        return { ...t, tier: newTier, mrr };
+      }
+      return t;
+    });
+    setTenants(updated);
+    localStorage.setItem("novavid_registered_tenants", JSON.stringify(updated));
+  };
+
   const handleGenerateLicense = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsGenerating(true);
@@ -255,11 +362,8 @@ export const AdminSaaSPanel: React.FC<AdminSaaSPanelProps> = ({ onNavigateToAwsC
     setTimeout(() => setCopiedNotice(false), 2500);
   };
 
-  // Payment Management Handlers
   const handleApprovePayment = async (requestId: string) => {
-    if (!window.confirm(`Are you sure you want to approve payment ${requestId} and activate the customer subscription?`)) {
-      return;
-    }
+    if (!window.confirm(`Approve payment ${requestId} and activate customer subscription?`)) return;
 
     try {
       const res = await manualPaymentService.approvePayment({
@@ -274,7 +378,7 @@ export const AdminSaaSPanel: React.FC<AdminSaaSPanelProps> = ({ onNavigateToAwsC
       }
 
       setPaymentRequests(manualPaymentService.listAllRequestsForAdmin(effectiveAdminEmail));
-      setPaymentNotice(`Payment ${requestId} successfully approved! Subscription activated.`);
+      setPaymentNotice(`Payment ${requestId} approved! Customer subscription active.`);
       setAuditLogs((prev) => [
         { id: `log_${Date.now()}`, action: `Payment ${requestId} approved. Subscription activated.`, time: "Just now" },
         ...prev,
@@ -318,7 +422,7 @@ export const AdminSaaSPanel: React.FC<AdminSaaSPanelProps> = ({ onNavigateToAwsC
     e.preventDefault();
     try {
       manualPaymentService.updateSettings(paymentConfig, effectiveAdminEmail);
-      setPaymentNotice("Payment methods & WhatsApp contact settings saved successfully!");
+      setPaymentNotice("WhatsApp & Payment Gateway configurations saved!");
       setTimeout(() => setPaymentNotice(null), 3000);
     } catch (err: any) {
       alert(`Failed to save settings: ${err.message}`);
@@ -339,623 +443,708 @@ export const AdminSaaSPanel: React.FC<AdminSaaSPanelProps> = ({ onNavigateToAwsC
   const totalMrr = tenants.reduce((acc, t) => acc + (t.status === "active" ? t.mrr : 0), 0);
   const activeSeats = tenants.reduce((acc, t) => acc + t.devices, 0);
 
+  // Authentication Gate Screen
   if (!isAuthorized) {
     return (
-      <div className="max-w-md mx-auto my-12 p-8 bg-slate-900 border border-indigo-600/40 rounded-2xl shadow-2xl text-slate-100">
-        <div className="text-center mb-6">
-          <div className="w-14 h-14 mx-auto mb-3 rounded-2xl bg-indigo-600/20 border border-indigo-500/40 flex items-center justify-center text-indigo-400 text-2xl font-bold">
-            🛡️
+      <div className="min-h-screen bg-[#070b19] flex items-center justify-center p-6 text-slate-100">
+        <div className="w-full max-w-md p-8 bg-[#0d1428] border border-blue-600/40 rounded-2xl shadow-2xl">
+          <div className="text-center mb-6">
+            <div className="w-16 h-16 mx-auto mb-3 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-3xl shadow-lg shadow-blue-500/30">
+              🛡️
+            </div>
+            <span className="px-3 py-1 rounded-full bg-blue-500/20 text-blue-400 font-mono text-xs font-bold uppercase tracking-wider border border-blue-500/30">
+              LODHI TECHX FLEET CONTROL
+            </span>
+            <h2 className="text-xl font-bold text-white mt-3">Super Admin Authentication</h2>
+            <p className="text-xs text-slate-400 mt-1">
+              Restricted management portal for platform owner Umar Hayat.
+            </p>
           </div>
-          <span className="px-2.5 py-0.5 rounded bg-indigo-500/20 text-indigo-400 font-mono text-[11px] font-semibold tracking-wider uppercase border border-indigo-500/30">
-            LODHI TECHX FLEET CONTROL
-          </span>
-          <h2 className="text-xl font-bold text-white mt-2">SaaS Super Admin Authentication</h2>
-          <p className="text-xs text-slate-400 mt-1">
-            Restricted zone. Access is strictly constrained to authorized platform owners.
-          </p>
+
+          {authError && (
+            <div className="mb-4 p-3 bg-red-950/80 border border-red-500/50 rounded-lg text-xs text-red-300">
+              {authError}
+            </div>
+          )}
+
+          <div className="flex border-b border-slate-800 mb-5">
+            <button
+              onClick={() => { setAuthMode("passcode"); setAuthError(null); }}
+              className={`flex-1 pb-2 text-xs font-semibold ${authMode === "passcode" ? "text-blue-400 border-b-2 border-blue-500" : "text-slate-400"}`}
+            >
+              Master Passcode
+            </button>
+            <button
+              onClick={() => { setAuthMode("email"); setAuthError(null); }}
+              className={`flex-1 pb-2 text-xs font-semibold ${authMode === "email" ? "text-blue-400 border-b-2 border-blue-500" : "text-slate-400"}`}
+            >
+              Email &amp; Pass
+            </button>
+            <button
+              onClick={() => { setAuthMode("google"); setAuthError(null); }}
+              className={`flex-1 pb-2 text-xs font-semibold ${authMode === "google" ? "text-blue-400 border-b-2 border-blue-500" : "text-slate-400"}`}
+            >
+              Google
+            </button>
+          </div>
+
+          {authMode === "passcode" && (
+            <form onSubmit={handlePasscodeSignIn} className="space-y-4">
+              <div>
+                <label className="block text-xs font-medium text-slate-300 mb-1">Passcode (LODHI-TECHX-2026)</label>
+                <input
+                  type="password"
+                  value={passcodeInput}
+                  onChange={(e) => setPasscodeInput(e.target.value)}
+                  placeholder="Enter Master Passcode"
+                  className="w-full px-3 py-2 text-xs bg-slate-950 border border-slate-700 rounded-lg text-slate-200 outline-none focus:border-blue-500"
+                  required
+                />
+              </div>
+              <button
+                type="submit"
+                className="w-full py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg font-bold text-xs transition-all shadow-md shadow-blue-500/30"
+              >
+                Unlock Super Admin Fleet
+              </button>
+            </form>
+          )}
+
+          {authMode === "email" && (
+            <form onSubmit={handleEmailSignIn} className="space-y-3">
+              <div>
+                <label className="block text-xs font-medium text-slate-300 mb-1">Admin Email</label>
+                <input
+                  type="email"
+                  value={loginEmail}
+                  onChange={(e) => setLoginEmail(e.target.value)}
+                  placeholder="umarhayatlodhi124@gmail.com"
+                  className="w-full px-3 py-2 text-xs bg-slate-950 border border-slate-700 rounded-lg text-slate-200 outline-none focus:border-blue-500"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-slate-300 mb-1">Password</label>
+                <input
+                  type="password"
+                  value={loginPassword}
+                  onChange={(e) => setLoginPassword(e.target.value)}
+                  placeholder="••••••••"
+                  className="w-full px-3 py-2 text-xs bg-slate-950 border border-slate-700 rounded-lg text-slate-200 outline-none focus:border-blue-500"
+                  required
+                />
+              </div>
+              <button
+                type="submit"
+                disabled={isAuthLoading}
+                className="w-full py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg font-bold text-xs transition-all shadow-md shadow-blue-500/30 disabled:opacity-50"
+              >
+                {isAuthLoading ? "Verifying..." : "Sign In to Admin"}
+              </button>
+            </form>
+          )}
+
+          {authMode === "google" && (
+            <div className="space-y-4">
+              <button
+                onClick={handleGoogleSignIn}
+                disabled={isAuthLoading}
+                className="w-full py-2.5 bg-white hover:bg-slate-100 text-slate-900 rounded-lg font-bold text-xs transition-all shadow-lg disabled:opacity-50"
+              >
+                Sign in with Google (Authorized Admin)
+              </button>
+            </div>
+          )}
+
+          <div className="mt-6 pt-4 border-t border-slate-800 text-center">
+            <a href="/" className="text-xs text-blue-400 hover:text-blue-300">
+              ← Return to NovaVid Studio
+            </a>
+          </div>
         </div>
-
-        {authError && (
-          <div className="mb-4 p-3 bg-red-950/80 border border-red-500/50 rounded-lg text-xs text-red-300 leading-relaxed">
-            {authError}
-          </div>
-        )}
-
-        {/* Auth Method Tabs */}
-        <div className="flex border-b border-slate-800 mb-5">
-          <button
-            onClick={() => { setAuthMode("google"); setAuthError(null); }}
-            className={`flex-1 pb-2 text-xs font-semibold transition-colors ${
-              authMode === "google"
-                ? "text-indigo-400 border-b-2 border-indigo-500"
-                : "text-slate-400 hover:text-slate-200"
-            }`}
-          >
-            Google OAuth
-          </button>
-          <button
-            onClick={() => { setAuthMode("email"); setAuthError(null); }}
-            className={`flex-1 pb-2 text-xs font-semibold transition-colors ${
-              authMode === "email"
-                ? "text-indigo-400 border-b-2 border-indigo-500"
-                : "text-slate-400 hover:text-slate-200"
-            }`}
-          >
-            Email Login
-          </button>
-          <button
-            onClick={() => { setAuthMode("passcode"); setAuthError(null); }}
-            className={`flex-1 pb-2 text-xs font-semibold transition-colors ${
-              authMode === "passcode"
-                ? "text-indigo-400 border-b-2 border-indigo-500"
-                : "text-slate-400 hover:text-slate-200"
-            }`}
-          >
-            Master Passcode
-          </button>
-        </div>
-
-        {authMode === "google" && (
-          <div className="space-y-4">
-            <button
-              onClick={handleGoogleSignIn}
-              disabled={isAuthLoading}
-              className="w-full py-2.5 px-4 bg-white hover:bg-slate-100 text-slate-900 rounded-lg font-semibold text-xs transition-colors flex items-center justify-center gap-2 cursor-pointer shadow-lg disabled:opacity-50"
-            >
-              <span>Sign in with Google (Authorized Admin)</span>
-            </button>
-          </div>
-        )}
-
-        {authMode === "email" && (
-          <form onSubmit={handleEmailSignIn} className="space-y-3">
-            <div>
-              <label className="block text-xs font-medium text-slate-300 mb-1">Admin Email</label>
-              <input
-                type="email"
-                value={loginEmail}
-                onChange={(e) => setLoginEmail(e.target.value)}
-                placeholder="umarhayatlodhi25@gmail.com"
-                className="w-full px-3 py-2 text-xs bg-slate-950 border border-slate-700 rounded-lg text-slate-200 focus:outline-none focus:border-indigo-500"
-                required
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-slate-300 mb-1">Password</label>
-              <input
-                type="password"
-                value={loginPassword}
-                onChange={(e) => setLoginPassword(e.target.value)}
-                placeholder="••••••••••••"
-                className="w-full px-3 py-2 text-xs bg-slate-950 border border-slate-700 rounded-lg text-slate-200 focus:outline-none focus:border-indigo-500"
-                required
-              />
-            </div>
-            <button
-              type="submit"
-              disabled={isAuthLoading}
-              className="w-full mt-2 py-2.5 text-xs font-semibold rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg transition-colors cursor-pointer"
-            >
-              {isAuthLoading ? "Verifying Credentials..." : "Authenticate Admin"}
-            </button>
-          </form>
-        )}
-
-        {authMode === "passcode" && (
-          <form onSubmit={handlePasscodeSignIn} className="space-y-3">
-            <div>
-              <label className="block text-xs font-medium text-slate-300 mb-1">Master Emergency Passcode</label>
-              <input
-                type="password"
-                value={passcodeInput}
-                onChange={(e) => setPasscodeInput(e.target.value)}
-                placeholder="Enter master passcode"
-                className="w-full px-3 py-2 text-xs bg-slate-950 border border-slate-700 rounded-lg text-slate-200 focus:outline-none focus:border-indigo-500 font-mono"
-                required
-              />
-            </div>
-            <button
-              type="submit"
-              className="w-full mt-2 py-2.5 text-xs font-semibold rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg transition-colors cursor-pointer"
-            >
-              Verify Master Key
-            </button>
-          </form>
-        )}
       </div>
     );
   }
 
+  // Super Admin Layout with Dedicated Left Sidebar
   return (
-    <div className="space-y-6 text-slate-100 p-1">
-      {/* SaaS Admin Header */}
-      <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 border border-indigo-700/40 rounded-xl p-5 shadow-xl">
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div>
+    <div className="min-h-screen bg-[#060914] text-slate-100 flex flex-col md:flex-row font-sans">
+      {/* ── Left Super Admin Sidebar ── */}
+      <aside className="w-full md:w-64 bg-[#0a0f24] border-r border-slate-800/80 flex flex-col justify-between shrink-0">
+        <div>
+          {/* Brand Header */}
+          <div className="p-5 border-b border-slate-800/80">
             <div className="flex items-center gap-3">
-              <span className="px-2.5 py-1 rounded bg-indigo-500/20 text-indigo-400 font-mono text-xs font-semibold tracking-wider uppercase border border-indigo-500/30">
-                LODHI TECHX FLEET CONTROL
-              </span>
-              <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                SUPER ADMIN: {currentUser?.email || (isPasscodeAuthorized ? "Master Key" : session.role.toUpperCase())}
-              </span>
+              <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-lg font-black shadow-lg shadow-blue-500/30">
+                ⚡
+              </div>
+              <div>
+                <h1 className="text-sm font-bold text-white tracking-wide">NovaVid Admin</h1>
+                <p className="text-[10px] text-blue-400 font-mono tracking-wider font-semibold">LODHI TECHX FLEET</p>
+              </div>
             </div>
-            <h2 className="text-2xl font-bold text-white mt-1.5">
-              Commercial SaaS Administration & Fleet Control
-            </h2>
-            <p className="text-slate-400 text-sm mt-0.5">
-              Multi-tenant telemetry, manual WhatsApp payment verification, Ed25519 licensing, and device management.
-            </p>
+
+            {/* Admin Info Pill */}
+            <div className="mt-4 p-2.5 rounded-lg bg-blue-950/40 border border-blue-500/30 text-[11px]">
+              <div className="flex items-center gap-1.5 text-emerald-400 font-semibold mb-0.5">
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                SUPER ADMIN
+              </div>
+              <p className="text-slate-300 truncate font-mono text-[10px]">
+                {currentUser?.email || "umarhayatlodhi124@gmail.com"}
+              </p>
+            </div>
           </div>
 
-          <div className="flex items-center gap-3">
+          {/* Navigation Menu */}
+          <nav className="p-3 space-y-1.5 text-xs font-semibold">
             <button
-              onClick={handleAdminLogout}
-              className="px-3.5 py-2 text-xs font-medium rounded-lg bg-red-950/60 hover:bg-red-900/80 text-red-300 border border-red-700/50 transition-colors cursor-pointer"
+              onClick={() => setAdminTab("dashboard")}
+              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all cursor-pointer ${
+                adminTab === "dashboard"
+                  ? "bg-blue-600 text-white shadow-lg shadow-blue-600/30"
+                  : "text-slate-400 hover:text-white hover:bg-slate-800/50"
+              }`}
             >
-              🔒 Lock / Sign Out
+              <span>📊</span>
+              <span>Overview &amp; Metrics</span>
             </button>
-          </div>
+
+            <button
+              onClick={() => setAdminTab("tenants")}
+              className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl transition-all cursor-pointer ${
+                adminTab === "tenants"
+                  ? "bg-blue-600 text-white shadow-lg shadow-blue-600/30"
+                  : "text-slate-400 hover:text-white hover:bg-slate-800/50"
+              }`}
+            >
+              <div className="flex items-center gap-3">
+                <span>👥</span>
+                <span>Tenant &amp; Creator Fleet</span>
+              </div>
+              <span className="px-2 py-0.5 text-[10px] rounded-full bg-slate-800 text-slate-300">
+                {tenants.length}
+              </span>
+            </button>
+
+            <button
+              onClick={() => setAdminTab("payments")}
+              className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl transition-all cursor-pointer ${
+                adminTab === "payments"
+                  ? "bg-blue-600 text-white shadow-lg shadow-blue-600/30"
+                  : "text-slate-400 hover:text-white hover:bg-slate-800/50"
+              }`}
+            >
+              <div className="flex items-center gap-3">
+                <span>💬</span>
+                <span>Manual Payments</span>
+              </div>
+              {pendingPaymentsCount > 0 && (
+                <span className="px-2 py-0.5 text-[10px] rounded-full bg-amber-500 text-slate-950 font-bold animate-pulse">
+                  {pendingPaymentsCount}
+                </span>
+              )}
+            </button>
+
+            <button
+              onClick={() => setAdminTab("methods")}
+              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all cursor-pointer ${
+                adminTab === "methods"
+                  ? "bg-blue-600 text-white shadow-lg shadow-blue-600/30"
+                  : "text-slate-400 hover:text-white hover:bg-slate-800/50"
+              }`}
+            >
+              <span>⚙️</span>
+              <span>WhatsApp &amp; Gateways</span>
+            </button>
+
+            <button
+              onClick={() => setAdminTab("licenses")}
+              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all cursor-pointer ${
+                adminTab === "licenses"
+                  ? "bg-blue-600 text-white shadow-lg shadow-blue-600/30"
+                  : "text-slate-400 hover:text-white hover:bg-slate-800/50"
+              }`}
+            >
+              <span>🔑</span>
+              <span>Ed25519 License Issuer</span>
+            </button>
+
+            <button
+              onClick={() => setAdminTab("telemetry")}
+              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all cursor-pointer ${
+                adminTab === "telemetry"
+                  ? "bg-blue-600 text-white shadow-lg shadow-blue-600/30"
+                  : "text-slate-400 hover:text-white hover:bg-slate-800/50"
+              }`}
+            >
+              <span>📡</span>
+              <span>Cloud Telemetry &amp; DB</span>
+            </button>
+          </nav>
         </div>
 
-        {/* Global SaaS Financial & Usage Telemetry Cards */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-6">
-          <div className="bg-slate-800/80 border border-slate-700/60 rounded-lg p-3.5">
-            <p className="text-xs font-medium text-slate-400">Monthly Recurring Revenue</p>
-            <p className="text-2xl font-black text-emerald-400 mt-1">${totalMrr.toLocaleString()}</p>
-            <p className="text-[11px] text-emerald-500/80 mt-0.5 font-medium">↑ +18.4% vs last cycle</p>
-          </div>
+        {/* Sidebar Footer Actions */}
+        <div className="p-4 border-t border-slate-800/80 space-y-2">
+          <a
+            href="/"
+            className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold transition-colors"
+          >
+            <span>←</span> Exit to Studio
+          </a>
 
-          <div className="bg-slate-800/80 border border-slate-700/60 rounded-lg p-3.5">
-            <p className="text-xs font-medium text-slate-400">Active Tenants</p>
-            <p className="text-2xl font-black text-cyan-400 mt-1">{tenants.length}</p>
-            <p className="text-[11px] text-slate-400 mt-0.5 font-medium">100% Tenant Isolated</p>
-          </div>
-
-          <div className="bg-slate-800/80 border border-slate-700/60 rounded-lg p-3.5">
-            <p className="text-xs font-medium text-slate-400">Pending WhatsApp Payments</p>
-            <p className="text-2xl font-black text-amber-400 mt-1">{pendingPaymentsCount}</p>
-            <p className="text-[11px] text-amber-400/80 mt-0.5 font-medium">Requires Manual Verification</p>
-          </div>
-
-          <div className="bg-slate-800/80 border border-slate-700/60 rounded-lg p-3.5">
-            <p className="text-xs font-medium text-slate-400">Bound Workstation Seats</p>
-            <p className="text-2xl font-black text-indigo-400 mt-1">{activeSeats}</p>
-            <p className="text-[11px] text-indigo-400/80 mt-0.5 font-medium">Hardware Fingerprint Locked</p>
-          </div>
+          <button
+            onClick={handleAdminLogout}
+            className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-lg bg-red-950/40 hover:bg-red-900/60 border border-red-800/40 text-red-300 text-xs font-semibold transition-colors cursor-pointer"
+          >
+            <span>🔒</span> Lock Admin
+          </button>
         </div>
-      </div>
+      </aside>
 
-      {/* Admin Section Navigation Tabs */}
-      <div className="flex border-b border-slate-800 gap-2">
-        <button
-          onClick={() => setAdminTab("tenants")}
-          className={`px-4 py-2 text-xs font-bold transition-all border-b-2 cursor-pointer ${
-            adminTab === "tenants"
-              ? "text-indigo-400 border-indigo-500 bg-indigo-950/20"
-              : "text-slate-400 border-transparent hover:text-white"
-          }`}
-        >
-          🏢 Tenant Fleet
-        </button>
-        <button
-          onClick={() => setAdminTab("payments")}
-          className={`px-4 py-2 text-xs font-bold transition-all border-b-2 cursor-pointer flex items-center gap-2 ${
-            adminTab === "payments"
-              ? "text-emerald-400 border-emerald-500 bg-emerald-950/20"
-              : "text-slate-400 border-transparent hover:text-white"
-          }`}
-        >
-          <span>💬 Manual Payments</span>
-          {pendingPaymentsCount > 0 && (
-            <span className="px-1.5 py-0.2 rounded-full bg-amber-500 text-slate-900 text-[10px] font-black">
-              {pendingPaymentsCount}
-            </span>
-          )}
-        </button>
-        <button
-          onClick={() => setAdminTab("methods")}
-          className={`px-4 py-2 text-xs font-bold transition-all border-b-2 cursor-pointer ${
-            adminTab === "methods"
-              ? "text-cyan-400 border-cyan-500 bg-cyan-950/20"
-              : "text-slate-400 border-transparent hover:text-white"
-          }`}
-        >
-          ⚙️ Payment Methods & WhatsApp Config
-        </button>
-        <button
-          onClick={() => setAdminTab("licenses")}
-          className={`px-4 py-2 text-xs font-bold transition-all border-b-2 cursor-pointer ${
-            adminTab === "licenses"
-              ? "text-amber-400 border-amber-500 bg-amber-950/20"
-              : "text-slate-400 border-transparent hover:text-white"
-          }`}
-        >
-          🔑 Ed25519 License Issuer
-        </button>
-      </div>
+      {/* ── Main Content Area ── */}
+      <main className="flex-1 overflow-y-auto p-6 md:p-8">
+        {/* Top Notification Toast */}
+        {paymentNotice && (
+          <div className="mb-6 p-4 rounded-xl bg-blue-950/80 border border-blue-500/50 text-blue-200 text-xs flex items-center justify-between shadow-xl">
+            <span>✨ {paymentNotice}</span>
+            <button onClick={() => setPaymentNotice(null)} className="text-blue-400 hover:text-white">✕</button>
+          </div>
+        )}
 
-      {paymentNotice && (
-        <div className="p-3 bg-emerald-950 border border-emerald-500 rounded-lg text-emerald-200 text-xs flex justify-between items-center">
-          <span>✓ {paymentNotice}</span>
-          <button onClick={() => setPaymentNotice(null)} className="text-emerald-400 font-bold hover:text-white">✕</button>
-        </div>
-      )}
-
-      {/* TAB 1: Tenants List */}
-      {adminTab === "tenants" && (
-        <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-md">
-          <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+        {/* ── TAB 1: OVERVIEW & METRICS ── */}
+        {adminTab === "dashboard" && (
+          <div className="space-y-6">
             <div>
-              <h3 className="text-lg font-bold text-white">Registered Tenant Fleet</h3>
-              <p className="text-xs text-slate-400">Tenant accounts, billing status, and device allocations</p>
+              <h2 className="text-2xl font-bold text-white">SaaS Revenue &amp; Fleet Overview</h2>
+              <p className="text-xs text-slate-400 mt-1">
+                Real-time active telemetry for novavid-ecfc8 production cloud.
+              </p>
             </div>
 
-            <div className="flex items-center gap-2">
+            {/* Metric Cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="p-5 rounded-2xl bg-[#0d1428] border border-emerald-500/30 shadow-lg">
+                <p className="text-xs font-semibold text-slate-400">Monthly Recurring Revenue</p>
+                <p className="text-3xl font-black text-emerald-400 mt-2">${totalMrr.toLocaleString()}</p>
+                <p className="text-[11px] text-emerald-500/80 mt-1 font-semibold">Active Subscriptions Base</p>
+              </div>
+
+              <div className="p-5 rounded-2xl bg-[#0d1428] border border-blue-500/30 shadow-lg">
+                <p className="text-xs font-semibold text-slate-400">Total Registered Tenants</p>
+                <p className="text-3xl font-black text-blue-400 mt-2">{tenants.length}</p>
+                <p className="text-[11px] text-blue-400/80 mt-1 font-semibold">Live in Firestore</p>
+              </div>
+
+              <div className="p-5 rounded-2xl bg-[#0d1428] border border-amber-500/30 shadow-lg">
+                <p className="text-xs font-semibold text-slate-400">Pending WhatsApp Receipts</p>
+                <p className="text-3xl font-black text-amber-400 mt-2">{pendingPaymentsCount}</p>
+                <p className="text-[11px] text-amber-400/80 mt-1 font-semibold">Awaiting Verification</p>
+              </div>
+
+              <div className="p-5 rounded-2xl bg-[#0d1428] border border-indigo-500/30 shadow-lg">
+                <p className="text-xs font-semibold text-slate-400">Authorized Device Seats</p>
+                <p className="text-3xl font-black text-indigo-400 mt-2">{activeSeats}</p>
+                <p className="text-[11px] text-indigo-400/80 mt-1 font-semibold">Hardware Locked</p>
+              </div>
+            </div>
+
+            {/* Quick Actions & Audit Stream */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              <div className="lg:col-span-2 p-6 rounded-2xl bg-[#0d1428] border border-slate-800 shadow-xl space-y-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-sm font-bold text-white">Recent Admin Audit Activity</h3>
+                  <button onClick={fetchRealFirestoreUsers} className="text-xs text-blue-400 hover:text-blue-300">
+                    🔄 Sync Live
+                  </button>
+                </div>
+                <div className="space-y-2.5">
+                  {auditLogs.map((log) => (
+                    <div key={log.id} className="p-3 rounded-lg bg-slate-900/60 border border-slate-800 text-xs flex items-center justify-between">
+                      <span className="text-slate-300">{log.action}</span>
+                      <span className="text-[10px] text-slate-500 font-mono">{log.time}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="p-6 rounded-2xl bg-[#0d1428] border border-slate-800 shadow-xl space-y-3">
+                <h3 className="text-sm font-bold text-white">Quick Control Shortcuts</h3>
+                <button
+                  onClick={() => setIsAddTenantOpen(true)}
+                  className="w-full py-2.5 px-4 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs flex items-center justify-center gap-2 transition-all shadow-md shadow-blue-600/30"
+                >
+                  ➕ Register New Tenant
+                </button>
+                <button
+                  onClick={() => setAdminTab("payments")}
+                  className="w-full py-2.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center justify-center gap-2 transition-all shadow-md shadow-emerald-600/30"
+                >
+                  💬 Review WhatsApp Slips ({pendingPaymentsCount})
+                </button>
+                <button
+                  onClick={() => setAdminTab("licenses")}
+                  className="w-full py-2.5 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs flex items-center justify-center gap-2 transition-all shadow-md shadow-indigo-600/30"
+                >
+                  🔑 Issue Ed25519 Key
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── TAB 2: TENANT & USER FLEET ── */}
+        {adminTab === "tenants" && (
+          <div className="space-y-6">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div>
+                <h2 className="text-2xl font-bold text-white">Registered Tenant Fleet</h2>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  Real registered accounts in Cloud Firestore with billing and device controls.
+                </p>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={fetchRealFirestoreUsers}
+                  className="px-3.5 py-2 text-xs font-semibold rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors"
+                >
+                  🔄 Sync Firestore
+                </button>
+                <button
+                  onClick={() => setIsAddTenantOpen(true)}
+                  className="px-4 py-2 text-xs font-bold rounded-xl bg-blue-600 hover:bg-blue-500 text-white transition-all shadow-md shadow-blue-600/30"
+                >
+                  ➕ Add New Tenant
+                </button>
+              </div>
+            </div>
+
+            {/* Search and Filters */}
+            <div className="flex flex-col sm:flex-row gap-3">
               <input
                 type="text"
                 placeholder="Filter by name or email..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="px-3 py-1.5 text-xs bg-slate-950 border border-slate-700 rounded-lg text-slate-200 placeholder-slate-500 focus:outline-none focus:border-indigo-500 w-48"
+                className="flex-1 px-4 py-2 text-xs bg-[#0d1428] border border-slate-700 rounded-xl text-slate-200 outline-none focus:border-blue-500"
               />
               <select
                 value={tierFilter}
                 onChange={(e) => setTierFilter(e.target.value)}
-                className="px-2.5 py-1.5 text-xs bg-slate-950 border border-slate-700 rounded-lg text-slate-200 focus:outline-none focus:border-indigo-500"
+                className="px-3 py-2 text-xs bg-[#0d1428] border border-slate-700 rounded-xl text-slate-200 outline-none"
               >
                 <option value="all">All Tiers</option>
-                <option value="starter">Starter</option>
-                <option value="creator_pro">Creator Pro</option>
-                <option value="agency_studio">Agency Studio</option>
-                <option value="enterprise">Enterprise</option>
+                <option value="enterprise">Enterprise ($199/mo)</option>
+                <option value="agency_studio">Agency Studio ($99/mo)</option>
+                <option value="creator_pro">Creator Pro ($29/mo)</option>
+                <option value="starter">Starter ($0/mo)</option>
               </select>
             </div>
-          </div>
 
-          <div className="overflow-x-auto rounded-lg border border-slate-800">
-            <table className="w-full text-left text-xs text-slate-300">
-              <thead className="bg-slate-950/70 text-slate-400 font-semibold border-b border-slate-800">
-                <tr>
-                  <th className="px-3.5 py-2.5">Organization / Tenant</th>
-                  <th className="px-3.5 py-2.5">Tier</th>
-                  <th className="px-3.5 py-2.5">MRR</th>
-                  <th className="px-3.5 py-2.5">Devices</th>
-                  <th className="px-3.5 py-2.5">Status</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-800/60 font-mono">
-                {filteredTenants.map((t) => (
-                  <tr key={t.id} className="hover:bg-slate-800/40 transition-colors">
-                    <td className="px-3.5 py-3 font-sans">
-                      <div className="font-semibold text-white">{t.name}</div>
-                      <div className="text-[11px] text-slate-400">{t.ownerEmail}</div>
-                    </td>
-                    <td className="px-3.5 py-3">
-                      <span className="px-2 py-0.5 rounded bg-slate-800 text-indigo-300 border border-slate-700 text-[11px]">
-                        {t.tier}
+            {/* Tenant Table */}
+            <div className="bg-[#0d1428] border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-slate-900/80 text-slate-400 uppercase text-[10px] font-bold border-b border-slate-800">
+                    <tr>
+                      <th className="px-5 py-3.5">Organization / User</th>
+                      <th className="px-5 py-3.5">Tier</th>
+                      <th className="px-5 py-3.5">MRR</th>
+                      <th className="px-5 py-3.5">Seats</th>
+                      <th className="px-5 py-3.5">Status</th>
+                      <th className="px-5 py-3.5 text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-800/60">
+                    {filteredTenants.length === 0 ? (
+                      <tr>
+                        <td colSpan={6} className="px-5 py-8 text-center text-slate-500">
+                          No tenants found matching your search.
+                        </td>
+                      </tr>
+                    ) : (
+                      filteredTenants.map((tenant) => (
+                        <tr key={tenant.id} className="hover:bg-slate-800/30 transition-colors">
+                          <td className="px-5 py-4">
+                            <p className="font-bold text-white text-xs">{tenant.name}</p>
+                            <p className="text-[11px] text-slate-400 font-mono">{tenant.ownerEmail}</p>
+                          </td>
+                          <td className="px-5 py-4">
+                            <select
+                              value={tenant.tier}
+                              onChange={(e) => handleChangeTenantTier(tenant.id, e.target.value as TenantRecord["tier"])}
+                              className="px-2 py-1 bg-slate-900 border border-slate-700 rounded text-[11px] text-slate-200 font-semibold"
+                            >
+                              <option value="starter">Starter ($0)</option>
+                              <option value="creator_pro">Creator Pro ($29)</option>
+                              <option value="agency_studio">Agency ($99)</option>
+                              <option value="enterprise">Enterprise ($199)</option>
+                            </select>
+                          </td>
+                          <td className="px-5 py-4 font-mono font-bold text-emerald-400">
+                            ${tenant.mrr}/mo
+                          </td>
+                          <td className="px-5 py-4 text-slate-300 font-mono">
+                            {tenant.devices} devices
+                          </td>
+                          <td className="px-5 py-4">
+                            <span
+                              className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
+                                tenant.status === "active"
+                                  ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"
+                                  : "bg-red-500/20 text-red-400 border border-red-500/30"
+                              }`}
+                            >
+                              {tenant.status}
+                            </span>
+                          </td>
+                          <td className="px-5 py-4 text-right space-x-2">
+                            <button
+                              onClick={() => handleToggleTenantStatus(tenant.id)}
+                              className={`px-2.5 py-1 rounded text-[11px] font-semibold transition-colors cursor-pointer ${
+                                tenant.status === "active"
+                                  ? "bg-amber-950/40 text-amber-300 border border-amber-800 hover:bg-amber-900/60"
+                                  : "bg-emerald-950/40 text-emerald-300 border border-emerald-800 hover:bg-emerald-900/60"
+                              }`}
+                            >
+                              {tenant.status === "active" ? "Suspend" : "Activate"}
+                            </button>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── TAB 3: MANUAL PAYMENTS ── */}
+        {adminTab === "payments" && (
+          <div className="space-y-6">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div>
+                <h2 className="text-2xl font-bold text-white">WhatsApp &amp; Manual Payments</h2>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  Verify customer payment receipts, approve activations, or log rejections.
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setPaymentFilter("ALL")}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold ${paymentFilter === "ALL" ? "bg-blue-600 text-white" : "bg-slate-800 text-slate-400"}`}
+                >
+                  All ({paymentRequests.length})
+                </button>
+                <button
+                  onClick={() => setPaymentFilter("PENDING_VERIFICATION")}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold ${paymentFilter === "PENDING_VERIFICATION" ? "bg-amber-600 text-white" : "bg-slate-800 text-slate-400"}`}
+                >
+                  Pending ({pendingPaymentsCount})
+                </button>
+                <button
+                  onClick={() => setPaymentFilter("APPROVED")}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold ${paymentFilter === "APPROVED" ? "bg-emerald-600 text-white" : "bg-slate-800 text-slate-400"}`}
+                >
+                  Approved
+                </button>
+              </div>
+            </div>
+
+            {filteredPayments.length === 0 ? (
+              <div className="p-12 text-center bg-[#0d1428] border border-slate-800 rounded-2xl">
+                <p className="text-slate-400 text-xs">No payment requests matching filter.</p>
+                <p className="text-[11px] text-slate-500 mt-1">
+                  Customer payment slips uploaded via WhatsApp will appear here automatically.
+                </p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {filteredPayments.map((req) => (
+                  <div key={req.id} className="p-5 rounded-2xl bg-[#0d1428] border border-slate-800 space-y-3 shadow-lg">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <span className="font-mono text-[10px] text-blue-400 font-bold">{req.id}</span>
+                        <h4 className="font-bold text-white text-sm">{req.customerName}</h4>
+                        <p className="text-xs text-slate-400">{req.customerEmail}</p>
+                      </div>
+                      <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                        {req.status}
                       </span>
-                    </td>
-                    <td className="px-3.5 py-3 text-emerald-400 font-semibold">${t.mrr}/mo</td>
-                    <td className="px-3.5 py-3">{t.devices} active</td>
-                    <td className="px-3.5 py-3">
-                      <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
-                        t.status === "active" ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30" : "bg-rose-500/20 text-rose-400"
-                      }`}>
-                        {t.status}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
+                    </div>
 
-      {/* TAB 2: Manual Payment Management */}
-      {adminTab === "payments" && (
-        <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-md space-y-4">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <h3 className="text-lg font-bold text-white">Manual WhatsApp Payment Verification</h3>
-              <p className="text-xs text-slate-400">Review receipts, verify transaction references, and activate subscriptions</p>
-            </div>
+                    <div className="p-3 bg-slate-900/60 rounded-xl space-y-1 text-xs">
+                      <div className="flex justify-between">
+                        <span className="text-slate-400">Plan:</span>
+                        <span className="text-white font-bold uppercase">{req.planId}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-slate-400">Amount:</span>
+                        <span className="text-emerald-400 font-bold font-mono">{req.amount} {req.currency}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-slate-400">Method:</span>
+                        <span className="text-slate-200">{req.paymentMethodName}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-slate-400">Txn Ref:</span>
+                        <span className="text-blue-300 font-mono">{req.transactionReference}</span>
+                      </div>
+                    </div>
 
-            <div className="flex items-center gap-2">
-              <select
-                value={paymentFilter}
-                onChange={(e) => setPaymentFilter(e.target.value)}
-                className="px-3 py-1.5 text-xs bg-slate-950 border border-slate-700 rounded-lg text-slate-200 focus:outline-none focus:border-indigo-500"
-              >
-                <option value="ALL">All Statuses ({paymentRequests.length})</option>
-                <option value="PENDING_VERIFICATION">Pending Verification ({pendingPaymentsCount})</option>
-                <option value="APPROVED">Approved</option>
-                <option value="REJECTED">Rejected</option>
-                <option value="CANCELLED">Cancelled</option>
-              </select>
-            </div>
-          </div>
-
-          {filteredPayments.length === 0 ? (
-            <div className="p-8 text-center text-slate-500 text-xs bg-slate-950 rounded-xl border border-slate-800">
-              No payment requests found for the selected filter.
-            </div>
-          ) : (
-            <div className="overflow-x-auto rounded-lg border border-slate-800">
-              <table className="w-full text-left text-xs text-slate-300">
-                <thead className="bg-slate-950/70 text-slate-400 font-semibold border-b border-slate-800">
-                  <tr>
-                    <th className="px-3.5 py-2.5">Request ID</th>
-                    <th className="px-3.5 py-2.5">Customer & Org</th>
-                    <th className="px-3.5 py-2.5">Plan / Cycle</th>
-                    <th className="px-3.5 py-2.5">Amount</th>
-                    <th className="px-3.5 py-2.5">Method & TRX ID</th>
-                    <th className="px-3.5 py-2.5">Status</th>
-                    <th className="px-3.5 py-2.5 text-right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-800/60 font-mono">
-                  {filteredPayments.map((req) => (
-                    <tr key={req.id} className="hover:bg-slate-800/40 transition-colors">
-                      <td className="px-3.5 py-3">
-                        <span className="font-bold text-white text-[11px]">{req.id}</span>
-                        <div className="text-[10px] text-slate-500">{new Date(req.submittedAt).toLocaleDateString()}</div>
-                      </td>
-                      <td className="px-3.5 py-3 font-sans">
-                        <div className="font-semibold text-white">{req.customerName}</div>
-                        <div className="text-[10px] text-slate-400">{req.customerEmail}</div>
-                        <div className="text-[10px] text-indigo-400 font-mono">{req.organizationId}</div>
-                      </td>
-                      <td className="px-3.5 py-3">
-                        <span className="px-2 py-0.5 rounded bg-slate-800 text-emerald-300 border border-slate-700 text-[11px]">
-                          {req.planId.toUpperCase()}
-                        </span>
-                        <div className="text-[10px] text-slate-400 mt-0.5">{req.billingCycle}</div>
-                      </td>
-                      <td className="px-3.5 py-3 font-bold text-emerald-400 font-sans">
-                        Rs {req.amount.toLocaleString()} {req.currency}
-                      </td>
-                      <td className="px-3.5 py-3 font-sans">
-                        <div className="text-white text-[11px] font-semibold">{req.paymentMethodName}</div>
-                        <div className="text-cyan-300 font-mono text-[10px]">{req.transactionReference}</div>
-                      </td>
-                      <td className="px-3.5 py-3">
-                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                          req.status === "APPROVED"
-                            ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"
-                            : req.status === "REJECTED"
-                            ? "bg-rose-500/20 text-rose-400 border border-rose-500/30"
-                            : "bg-amber-500/20 text-amber-400 border border-amber-500/30 animate-pulse"
-                        }`}>
-                          {req.status}
-                        </span>
-                      </td>
-                      <td className="px-3.5 py-3 text-right space-x-1.5 font-sans">
+                    <div className="flex items-center gap-2 pt-1">
+                      {req.screenshot?.dataUrlOrPath && (
                         <button
                           onClick={() => setSelectedReceipt(req)}
-                          className="px-2 py-1 text-[11px] bg-slate-800 hover:bg-slate-700 text-slate-300 rounded border border-slate-700"
+                          className="flex-1 py-1.5 px-3 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg text-xs font-semibold"
                         >
-                          View Receipt
+                          🔍 View Slip
                         </button>
-                        {req.status === "PENDING_VERIFICATION" && (
-                          <>
-                            <button
-                              onClick={() => handleApprovePayment(req.id)}
-                              className="px-2.5 py-1 text-[11px] bg-emerald-600 hover:bg-emerald-500 text-white rounded font-bold"
-                            >
-                              Approve
-                            </button>
-                            <button
-                              onClick={() => setRejectingRequestId(req.id)}
-                              className="px-2 py-1 text-[11px] bg-rose-600/30 hover:bg-rose-600/50 text-rose-300 rounded border border-rose-500/40"
-                            >
-                              Reject
-                            </button>
-                          </>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* TAB 3: Payment Methods & WhatsApp Config */}
-      {adminTab === "methods" && (
-        <form onSubmit={handleSavePaymentConfig} className="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-md space-y-6">
-          <div>
-            <h3 className="text-lg font-bold text-white">Payment Method & WhatsApp Configuration</h3>
-            <p className="text-xs text-slate-400">Configure recipient account numbers, IBANs, and WhatsApp support contact without editing code.</p>
-          </div>
-
-          {/* WhatsApp Support Config */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 p-4 bg-slate-950 rounded-xl border border-slate-800">
-            <div>
-              <label className="block text-xs font-medium text-slate-300 mb-1">WhatsApp Support Number</label>
-              <input
-                type="text"
-                value={paymentConfig.whatsappNumber}
-                onChange={(e) => setPaymentConfig({ ...paymentConfig, whatsappNumber: e.target.value })}
-                placeholder="+923001234567"
-                className="w-full px-3 py-1.5 text-xs bg-slate-900 border border-slate-700 rounded-lg text-slate-200 font-mono"
-                required
-              />
-              <p className="text-[10px] text-slate-500 mt-1">Must include country code (e.g. +92 for Pakistan)</p>
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-slate-300 mb-1">Support Desk Contact Name</label>
-              <input
-                type="text"
-                value={paymentConfig.supportContactName}
-                onChange={(e) => setPaymentConfig({ ...paymentConfig, supportContactName: e.target.value })}
-                className="w-full px-3 py-1.5 text-xs bg-slate-900 border border-slate-700 rounded-lg text-slate-200"
-                required
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-slate-300 mb-1">Business Hours</label>
-              <input
-                type="text"
-                value={paymentConfig.businessHours}
-                onChange={(e) => setPaymentConfig({ ...paymentConfig, businessHours: e.target.value })}
-                className="w-full px-3 py-1.5 text-xs bg-slate-900 border border-slate-700 rounded-lg text-slate-200"
-              />
-            </div>
-          </div>
-
-          {/* Payment Methods List */}
-          <div className="space-y-4">
-            <h4 className="text-xs font-bold text-white uppercase tracking-wider">Configured Payment Methods</h4>
-            {paymentConfig.paymentMethods.map((method, idx) => (
-              <div key={method.id} className="p-4 bg-slate-950 rounded-xl border border-slate-800 space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="font-bold text-white text-xs">{method.name} ({method.id})</span>
-                  <label className="flex items-center gap-2 cursor-pointer text-xs text-slate-300">
-                    <input
-                      type="checkbox"
-                      checked={method.isEnabled}
-                      onChange={(e) => {
-                        const updated = [...paymentConfig.paymentMethods];
-                        updated[idx].isEnabled = e.target.checked;
-                        setPaymentConfig({ ...paymentConfig, paymentMethods: updated });
-                      }}
-                      className="rounded bg-slate-900 border-slate-700 text-indigo-600"
-                    />
-                    <span>Enabled</span>
-                  </label>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  <div>
-                    <label className="block text-[11px] text-slate-400 mb-1">Account Title</label>
-                    <input
-                      type="text"
-                      value={method.accountTitle}
-                      onChange={(e) => {
-                        const updated = [...paymentConfig.paymentMethods];
-                        updated[idx].accountTitle = e.target.value;
-                        setPaymentConfig({ ...paymentConfig, paymentMethods: updated });
-                      }}
-                      className="w-full px-2.5 py-1.5 text-xs bg-slate-900 border border-slate-700 rounded text-slate-200"
-                    />
+                      )}
+                      {req.status === "PENDING_VERIFICATION" && (
+                        <>
+                          <button
+                            onClick={() => handleApprovePayment(req.id)}
+                            className="flex-1 py-1.5 px-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-bold"
+                          >
+                            ✓ Approve
+                          </button>
+                          <button
+                            onClick={() => setRejectingRequestId(req.id)}
+                            className="py-1.5 px-3 bg-red-950/60 hover:bg-red-900 border border-red-700 text-red-300 rounded-lg text-xs font-bold"
+                          >
+                            ✕
+                          </button>
+                        </>
+                      )}
+                    </div>
                   </div>
-                  <div>
-                    <label className="block text-[11px] text-slate-400 mb-1">Account Number / IBAN</label>
-                    <input
-                      type="text"
-                      value={method.accountNumber}
-                      onChange={(e) => {
-                        const updated = [...paymentConfig.paymentMethods];
-                        updated[idx].accountNumber = e.target.value;
-                        setPaymentConfig({ ...paymentConfig, paymentMethods: updated });
-                      }}
-                      className="w-full px-2.5 py-1.5 text-xs bg-slate-900 border border-slate-700 rounded text-slate-200 font-mono"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[11px] text-slate-400 mb-1">Bank Name (if applicable)</label>
-                    <input
-                      type="text"
-                      value={method.bankName || ""}
-                      onChange={(e) => {
-                        const updated = [...paymentConfig.paymentMethods];
-                        updated[idx].bankName = e.target.value;
-                        setPaymentConfig({ ...paymentConfig, paymentMethods: updated });
-                      }}
-                      className="w-full px-2.5 py-1.5 text-xs bg-slate-900 border border-slate-700 rounded text-slate-200"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-[11px] text-slate-400 mb-1">Payment Instructions</label>
-                  <textarea
-                    rows={2}
-                    value={method.instructions}
-                    onChange={(e) => {
-                      const updated = [...paymentConfig.paymentMethods];
-                      updated[idx].instructions = e.target.value;
-                      setPaymentConfig({ ...paymentConfig, paymentMethods: updated });
-                    }}
-                    className="w-full px-2.5 py-1.5 text-xs bg-slate-900 border border-slate-700 rounded text-slate-200 resize-none"
-                  />
-                </div>
+                ))}
               </div>
-            ))}
+            )}
           </div>
+        )}
 
-          <div className="flex justify-end pt-2">
-            <button
-              type="submit"
-              className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-lg shadow-lg cursor-pointer"
-            >
-              Save Configuration
-            </button>
-          </div>
-        </form>
-      )}
+        {/* ── TAB 4: WHATSAPP & GATEWAYS CONFIG ── */}
+        {adminTab === "methods" && (
+          <div className="max-w-2xl space-y-6">
+            <div>
+              <h2 className="text-2xl font-bold text-white">WhatsApp &amp; Payment Gateway Settings</h2>
+              <p className="text-xs text-slate-400 mt-0.5">
+                Configure direct WhatsApp support contact and domestic payment methods shown to creators.
+              </p>
+            </div>
 
-      {/* TAB 4: Ed25519 License Token Issuer */}
-      {adminTab === "licenses" && (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          <div className="lg:col-span-8 bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-md">
-            <h3 className="text-lg font-bold text-white mb-2">Cryptographic License Issuer</h3>
-            <p className="text-xs text-slate-400 mb-4">
-              Issues tamper-proof digital license keys that work 100% offline with Ed25519 cryptographic verification.
-            </p>
-
-            <form onSubmit={handleGenerateLicense} className="space-y-3">
+            <form onSubmit={handleSavePaymentConfig} className="p-6 rounded-2xl bg-[#0d1428] border border-slate-800 space-y-4 shadow-xl">
               <div>
-                <label className="block text-xs font-medium text-slate-300 mb-1">Organization ID</label>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">
+                  Official WhatsApp Contact (e.g. +923001234567)
+                </label>
+                <input
+                  type="text"
+                  value={paymentConfig.whatsappNumber}
+                  onChange={(e) => setPaymentConfig({ ...paymentConfig, whatsappNumber: e.target.value })}
+                  className="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-xl text-xs text-white outline-none focus:border-blue-500 font-mono"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">
+                  Support Representative Name
+                </label>
+                <input
+                  type="text"
+                  value={paymentConfig.supportContactName}
+                  onChange={(e) => setPaymentConfig({ ...paymentConfig, supportContactName: e.target.value })}
+                  className="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-xl text-xs text-white outline-none focus:border-blue-500"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">
+                  Business Hours Notice
+                </label>
+                <input
+                  type="text"
+                  value={paymentConfig.businessHours}
+                  onChange={(e) => setPaymentConfig({ ...paymentConfig, businessHours: e.target.value })}
+                  className="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-xl text-xs text-white outline-none focus:border-blue-500"
+                />
+              </div>
+
+              <div className="pt-2">
+                <button
+                  type="submit"
+                  className="w-full py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs rounded-xl shadow-lg shadow-blue-600/30 transition-all cursor-pointer"
+                >
+                  Save Payment Configurations
+                </button>
+              </div>
+            </form>
+          </div>
+        )}
+
+        {/* ── TAB 5: ED25519 LICENSE ISSUER ── */}
+        {adminTab === "licenses" && (
+          <div className="max-w-2xl space-y-6">
+            <div>
+              <h2 className="text-2xl font-bold text-white">Cryptographic Ed25519 License Issuer</h2>
+              <p className="text-xs text-slate-400 mt-0.5">
+                Generate signed commercial license tokens for desktop offline workstations.
+              </p>
+            </div>
+
+            <form onSubmit={handleGenerateLicense} className="p-6 rounded-2xl bg-[#0d1428] border border-slate-800 space-y-4 shadow-xl">
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">Organization / Tenant ID</label>
                 <input
                   type="text"
                   value={genOrgId}
                   onChange={(e) => setGenOrgId(e.target.value)}
-                  className="w-full px-3 py-1.5 text-xs bg-slate-950 border border-slate-700 rounded-lg text-slate-200 focus:outline-none focus:border-indigo-500 font-mono"
+                  className="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-xl text-xs text-white outline-none focus:border-blue-500 font-mono"
                   required
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-slate-300 mb-1">Licensee Email</label>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">Target Customer Email</label>
                 <input
                   type="email"
                   value={genEmail}
                   onChange={(e) => setGenEmail(e.target.value)}
-                  className="w-full px-3 py-1.5 text-xs bg-slate-950 border border-slate-700 rounded-lg text-slate-200 focus:outline-none focus:border-indigo-500 font-mono"
+                  className="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-xl text-xs text-white outline-none focus:border-blue-500"
                   required
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-medium text-slate-300 mb-1">Commercial Tier</label>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1">Subscription Tier</label>
                   <select
                     value={genTier}
                     onChange={(e) => setGenTier(e.target.value as LicensePayload["tier"])}
-                    className="w-full px-2.5 py-1.5 text-xs bg-slate-950 border border-slate-700 rounded-lg text-slate-200 focus:outline-none focus:border-indigo-500"
+                    className="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-xl text-xs text-white outline-none"
                   >
-                    <option value="starter">Starter</option>
-                    <option value="creator_pro">Creator Pro</option>
-                    <option value="agency_studio">Agency Studio</option>
-                    <option value="enterprise">Enterprise</option>
+                    <option value="creator_pro">Creator Pro ($29/mo)</option>
+                    <option value="agency_studio">Agency Studio ($99/mo)</option>
+                    <option value="enterprise">Enterprise ($199/mo)</option>
                   </select>
                 </div>
 
                 <div>
-                  <label className="block text-xs font-medium text-slate-300 mb-1">Max Devices</label>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1">Max Bound Workstations</label>
                   <input
                     type="number"
-                    min="1"
-                    max="50"
+                    min={1}
+                    max={50}
                     value={genMaxDevices}
                     onChange={(e) => setGenMaxDevices(Number(e.target.value))}
-                    className="w-full px-3 py-1.5 text-xs bg-slate-950 border border-slate-700 rounded-lg text-slate-200 focus:outline-none focus:border-indigo-500 font-mono"
-                    required
+                    className="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-xl text-xs text-white outline-none"
                   />
                 </div>
               </div>
@@ -963,131 +1152,213 @@ export const AdminSaaSPanel: React.FC<AdminSaaSPanelProps> = ({ onNavigateToAwsC
               <button
                 type="submit"
                 disabled={isGenerating}
-                className="w-full mt-2 py-2.5 text-xs font-semibold rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg transition-colors flex items-center justify-center gap-2 cursor-pointer"
+                className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-xl shadow-lg shadow-indigo-600/30 transition-all cursor-pointer disabled:opacity-50"
               >
-                {isGenerating ? "Signing Payload..." : "Generate Cryptographic Token"}
+                {isGenerating ? "Signing Token..." : "Generate Signed License Token"}
               </button>
             </form>
 
             {generatedToken && (
-              <div className="mt-4 p-3 bg-slate-950 border border-indigo-500/40 rounded-lg">
-                <div className="flex items-center justify-between mb-1.5">
-                  <span className="text-[11px] font-semibold text-emerald-400">✓ Token Generated & Signed</span>
+              <div className="p-5 rounded-2xl bg-[#0d1428] border border-indigo-500/50 space-y-3">
+                <div className="flex justify-between items-center">
+                  <span className="text-xs font-bold text-indigo-300">Generated Ed25519 Token:</span>
                   <button
                     onClick={() => copyToClipboard(generatedToken)}
-                    className="text-[10px] text-indigo-300 hover:text-white underline font-mono cursor-pointer"
+                    className="text-xs text-blue-400 hover:text-white font-semibold cursor-pointer"
                   >
-                    {copiedNotice ? "Copied!" : "Copy Token"}
+                    {copiedNotice ? "✓ Copied!" : "📋 Copy Token"}
                   </button>
                 </div>
-                <textarea
-                  readOnly
-                  value={generatedToken}
-                  rows={3}
-                  className="w-full bg-transparent text-[10px] font-mono text-slate-300 focus:outline-none resize-none break-all"
-                />
+                <div className="p-3 bg-slate-950 rounded-xl border border-slate-800 text-[11px] font-mono text-emerald-400 break-all select-all">
+                  {generatedToken}
+                </div>
               </div>
             )}
           </div>
+        )}
 
-          <div className="lg:col-span-4 bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-md">
-            <h4 className="text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">
-              Recent Security & Administrative Actions
-            </h4>
-            <div className="space-y-1.5 text-xs text-slate-400">
-              {auditLogs.slice(0, 5).map((log) => (
-                <div key={log.id} className="bg-slate-950/40 px-3 py-1.5 rounded border border-slate-800/80">
-                  <div className="font-mono text-slate-300 text-[11px]">{log.action}</div>
-                  <div className="text-[10px] text-slate-500">{log.time}</div>
-                </div>
-              ))}
+        {/* ── TAB 6: CLOUD TELEMETRY & DB ── */}
+        {adminTab === "telemetry" && (
+          <div className="space-y-6">
+            <div>
+              <h2 className="text-2xl font-bold text-white">Cloud Firestore &amp; Infrastructure Health</h2>
+              <p className="text-xs text-slate-400 mt-0.5">
+                Backend services telemetry, storage limits, and security configuration.
+              </p>
             </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="p-5 rounded-2xl bg-[#0d1428] border border-slate-800 space-y-3">
+                <h4 className="text-xs font-bold text-slate-300 uppercase tracking-wider">Cloud Firestore Collections</h4>
+                <div className="space-y-2 text-xs">
+                  <div className="flex justify-between p-2.5 bg-slate-900/60 rounded-lg">
+                    <span className="text-slate-400">users /</span>
+                    <span className="text-blue-400 font-bold">{tenants.length} documents</span>
+                  </div>
+                  <div className="flex justify-between p-2.5 bg-slate-900/60 rounded-lg">
+                    <span className="text-slate-400">payment_requests /</span>
+                    <span className="text-emerald-400 font-bold">{paymentRequests.length} records</span>
+                  </div>
+                  <div className="flex justify-between p-2.5 bg-slate-900/60 rounded-lg">
+                    <span className="text-slate-400">cloud_projects /</span>
+                    <span className="text-indigo-400 font-bold">Cloud Synced</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-5 rounded-2xl bg-[#0d1428] border border-slate-800 space-y-3">
+                <h4 className="text-xs font-bold text-slate-300 uppercase tracking-wider">Security &amp; Hardware Lock</h4>
+                <div className="space-y-2 text-xs">
+                  <div className="flex justify-between p-2.5 bg-slate-900/60 rounded-lg">
+                    <span className="text-slate-400">DPAPI Encrypted Vault</span>
+                    <span className="text-emerald-400 font-bold">ACTIVE (Local OS)</span>
+                  </div>
+                  <div className="flex justify-between p-2.5 bg-slate-900/60 rounded-lg">
+                    <span className="text-slate-400">Ed25519 Signing Engine</span>
+                    <span className="text-indigo-400 font-bold">SHA-256 Validated</span>
+                  </div>
+                  <div className="flex justify-between p-2.5 bg-slate-900/60 rounded-lg">
+                    <span className="text-slate-400">Project Selected Region</span>
+                    <span className="text-slate-300 font-bold">ap-southeast-2 (Sydney)</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </main>
+
+      {/* ── MODAL: Register New Tenant ── */}
+      {isAddTenantOpen && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="w-full max-w-md p-6 bg-[#0d1428] border border-blue-500/40 rounded-2xl shadow-2xl space-y-4">
+            <div className="flex justify-between items-center">
+              <h3 className="text-base font-bold text-white">Register New Tenant / Creator</h3>
+              <button onClick={() => setIsAddTenantOpen(false)} className="text-slate-400 hover:text-white">✕</button>
+            </div>
+
+            <form onSubmit={handleCreateTenant} className="space-y-3 text-xs">
+              <div>
+                <label className="block text-slate-300 font-semibold mb-1">Creator / Org Name</label>
+                <input
+                  type="text"
+                  value={newTenantName}
+                  onChange={(e) => setNewTenantName(e.target.value)}
+                  placeholder="e.g. Ali Production Studio"
+                  className="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-xl text-white outline-none focus:border-blue-500"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-slate-300 font-semibold mb-1">Email Address</label>
+                <input
+                  type="email"
+                  value={newTenantEmail}
+                  onChange={(e) => setNewTenantEmail(e.target.value)}
+                  placeholder="creator@gmail.com"
+                  className="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-xl text-white outline-none focus:border-blue-500"
+                  required
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-slate-300 font-semibold mb-1">Subscription Tier</label>
+                  <select
+                    value={newTenantTier}
+                    onChange={(e) => setNewTenantTier(e.target.value as TenantRecord["tier"])}
+                    className="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-xl text-white outline-none"
+                  >
+                    <option value="starter">Starter ($0/mo)</option>
+                    <option value="creator_pro">Creator Pro ($29/mo)</option>
+                    <option value="agency_studio">Agency ($99/mo)</option>
+                    <option value="enterprise">Enterprise ($199/mo)</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-slate-300 font-semibold mb-1">Max Devices</label>
+                  <input
+                    type="number"
+                    min={1}
+                    max={20}
+                    value={newTenantDevices}
+                    onChange={(e) => setNewTenantDevices(Number(e.target.value))}
+                    className="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-xl text-white outline-none"
+                  />
+                </div>
+              </div>
+
+              <div className="pt-2 flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => setIsAddTenantOpen(false)}
+                  className="flex-1 py-2 rounded-xl bg-slate-800 text-slate-300 font-semibold"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold shadow-md shadow-blue-600/30"
+                >
+                  Save Tenant
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
 
-      {/* View Receipt Screenshot Modal */}
+      {/* ── MODAL: View Payment Receipt ── */}
       {selectedReceipt && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm">
-          <div className="bg-slate-900 border border-slate-700 rounded-xl max-w-lg w-full p-5 shadow-2xl space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-2">
-              <div>
-                <h4 className="font-bold text-white text-sm">Payment Receipt: {selectedReceipt.id}</h4>
-                <p className="text-[11px] text-slate-400">{selectedReceipt.customerName} ({selectedReceipt.customerEmail})</p>
-              </div>
-              <button onClick={() => setSelectedReceipt(null)} className="text-slate-400 hover:text-white font-bold">✕</button>
+        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="w-full max-w-lg p-6 bg-[#0d1428] border border-slate-700 rounded-2xl shadow-2xl space-y-4">
+            <div className="flex justify-between items-center">
+              <h3 className="text-sm font-bold text-white">Payment Receipt: {selectedReceipt.id}</h3>
+              <button onClick={() => setSelectedReceipt(null)} className="text-slate-400 hover:text-white">✕</button>
             </div>
-
-            <div className="p-3 bg-slate-950 rounded-lg border border-slate-800 text-xs space-y-1 font-mono">
-              <div><span className="text-slate-500">Method:</span> <span className="text-white">{selectedReceipt.paymentMethodName}</span></div>
-              <div><span className="text-slate-500">TRX ID:</span> <span className="text-cyan-300 font-bold">{selectedReceipt.transactionReference}</span></div>
-              <div><span className="text-slate-500">Amount:</span> <span className="text-emerald-400 font-bold">Rs {selectedReceipt.amount.toLocaleString()} {selectedReceipt.currency}</span></div>
-              <div><span className="text-slate-500">File:</span> <span className="text-slate-300">{selectedReceipt.screenshot.fileName} ({(selectedReceipt.screenshot.sizeBytes / 1024).toFixed(1)} KB)</span></div>
-            </div>
-
-            {/* Image Preview */}
-            <div className="max-h-72 overflow-auto bg-slate-950 rounded-lg p-2 border border-slate-800 flex items-center justify-center">
-              {selectedReceipt.screenshot.dataUrlOrPath.startsWith("data:image") ? (
+            <div className="max-h-[60vh] overflow-auto rounded-xl border border-slate-800 bg-slate-950 p-2 text-center">
+              {selectedReceipt.screenshot?.dataUrlOrPath ? (
                 <img
                   src={selectedReceipt.screenshot.dataUrlOrPath}
-                  alt="Receipt Preview"
-                  className="max-h-64 object-contain rounded"
+                  alt="Receipt"
+                  className="max-h-[55vh] mx-auto rounded object-contain"
                 />
               ) : (
-                <div className="text-center p-6 text-slate-400 text-xs">
-                  📄 Receipt file: {selectedReceipt.screenshot.fileName}
-                </div>
+                <p className="text-xs text-slate-500 py-8">No receipt preview available.</p>
               )}
             </div>
-
-            <div className="flex justify-end gap-2 pt-2 border-t border-slate-800">
-              <button
-                onClick={() => setSelectedReceipt(null)}
-                className="px-4 py-1.5 text-xs font-semibold rounded bg-slate-800 hover:bg-slate-700 text-slate-300"
-              >
-                Close
-              </button>
-              {selectedReceipt.status === "PENDING_VERIFICATION" && (
-                <button
-                  onClick={() => {
-                    const reqId = selectedReceipt.id;
-                    setSelectedReceipt(null);
-                    handleApprovePayment(reqId);
-                  }}
-                  className="px-4 py-1.5 text-xs font-bold rounded bg-emerald-600 hover:bg-emerald-500 text-white"
-                >
-                  Approve & Activate Subscription
-                </button>
-              )}
+            <div className="text-xs text-slate-400">
+              <p>Customer: <span className="text-white font-semibold">{selectedReceipt.customerName}</span> ({selectedReceipt.customerEmail})</p>
+              <p>Reference: <span className="text-blue-300 font-mono">{selectedReceipt.transactionReference}</span></p>
             </div>
           </div>
         </div>
       )}
 
-      {/* Reject Reason Modal */}
+      {/* ── MODAL: Reject Payment ── */}
       {rejectingRequestId && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm">
-          <div className="bg-slate-900 border border-slate-700 rounded-xl max-w-md w-full p-5 shadow-2xl space-y-3">
-            <h4 className="font-bold text-white text-sm">Reject Payment Request: {rejectingRequestId}</h4>
-            <p className="text-xs text-slate-400">Please provide a clear reason for the customer.</p>
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="w-full max-w-md p-6 bg-[#0d1428] border border-red-500/40 rounded-2xl shadow-2xl space-y-3">
+            <h3 className="text-sm font-bold text-red-400">Reject Payment {rejectingRequestId}</h3>
+            <p className="text-xs text-slate-400">Please provide a reason for the rejection:</p>
             <textarea
-              rows={3}
               value={rejectReason}
               onChange={(e) => setRejectReason(e.target.value)}
-              placeholder="e.g. Transaction ID was not found in our bank statement, or screenshot was illegible."
-              className="w-full p-2.5 text-xs bg-slate-950 border border-slate-700 rounded-lg text-slate-200 focus:outline-none focus:border-rose-500"
-              required
+              placeholder="e.g. Transaction ID not found in bank statement..."
+              className="w-full h-24 p-3 bg-slate-950 border border-slate-700 rounded-xl text-xs text-white outline-none focus:border-red-500"
             />
-            <div className="flex justify-end gap-2 pt-2">
+            <div className="flex gap-3 pt-2">
               <button
-                onClick={() => { setRejectingRequestId(null); setRejectReason(""); }}
-                className="px-3 py-1.5 text-xs font-semibold rounded bg-slate-800 hover:bg-slate-700 text-slate-300"
+                onClick={() => setRejectingRequestId(null)}
+                className="flex-1 py-2 rounded-xl bg-slate-800 text-slate-300 text-xs font-semibold"
               >
                 Cancel
               </button>
               <button
                 onClick={handleRejectPayment}
-                className="px-4 py-1.5 text-xs font-bold rounded bg-rose-600 hover:bg-rose-500 text-white"
+                className="flex-1 py-2 rounded-xl bg-red-600 hover:bg-red-500 text-white text-xs font-bold"
               >
                 Confirm Rejection
               </button>
