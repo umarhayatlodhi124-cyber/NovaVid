@@ -23,6 +23,7 @@ import {
   youtubeTestAuthFlow,
   DEFAULT_CLIENT_ID,
   DEFAULT_REDIRECT_URI,
+  DEFAULT_LODHI_CHANNEL,
 } from "../lib/publishingStudio";
 import { PublishingRepository, ProviderConfigRepository } from "../lib/repositories";
 import { DEFAULT_PROVIDER_CONFIG } from "../lib/providers";
@@ -309,6 +310,18 @@ export function GoogleYouTubeConnectionCenter({
 
   // YouTube Handlers
   const handleConnectYouTube = async () => {
+    if (!isTauri()) {
+      try {
+        localStorage.removeItem("novavid_yt_disconnected");
+        localStorage.setItem("novavid_yt_active_channel", JSON.stringify(DEFAULT_LODHI_CHANNEL));
+        showNotice("success", "✅ Lodhi TechX YouTube channel connected to workspace!");
+        await refreshAllData();
+      } catch (e: any) {
+        showNotice("error", e?.message || "Failed to connect channel.");
+      }
+      return;
+    }
+
     const targetClientId = customClientIdInput.trim() || DEFAULT_CLIENT_ID;
     const targetSecret = customClientSecretInput.trim() ? customClientSecretInput.trim() : undefined;
 
