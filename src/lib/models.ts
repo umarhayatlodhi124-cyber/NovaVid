@@ -1,4 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
+import { isTauri } from "./platform";
 
 export interface GeminiModelInfo {
   id: string;
@@ -83,6 +84,7 @@ export const FALLBACK_GEMINI_CATALOG: GeminiModelInfo[] = [
 ];
 
 export async function fetchGeminiModelCatalog(): Promise<GeminiModelInfo[]> {
+  if (!isTauri()) return FALLBACK_GEMINI_CATALOG;
   try {
     return await invoke<GeminiModelInfo[]>("gemini_get_model_catalog");
   } catch {

@@ -22,7 +22,11 @@ export interface NativeImportedAsset {
 }
 
 export function isTauriEnvironment(): boolean {
-  return typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
+  return (
+    typeof window !== "undefined" &&
+    !(window as any).__TAURI_IS_WEB_POLYFILL__ &&
+    Boolean((window as any).__TAURI_INTERNALS__ || (window as any).__TAURI__)
+  );
 }
 
 /**

@@ -18,6 +18,7 @@ import type { Project, ProjectInput, ProjectLanguage } from "./project";
 export function isTauriEnvironment(): boolean {
   return (
     typeof window !== "undefined" &&
+    !(window as any).__TAURI_IS_WEB_POLYFILL__ &&
     Boolean((window as any).__TAURI_INTERNALS__ || (window as any).__TAURI__)
   );
 }
