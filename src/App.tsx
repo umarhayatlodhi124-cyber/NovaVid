@@ -101,8 +101,6 @@ import { PublishingStudioPage } from "./components/PublishingStudioPage";
 import { AnalyticsStudioPage } from "./components/AnalyticsStudioPage";
 import { WorkstationShortcutsModal } from "./components/WorkstationShortcutsModal";
 import { LicensingStudioPage } from "./components/LicensingStudioPage";
-import { AdminSaaSPanel } from "./components/AdminSaaSPanel";
-import { CustomerSaaSPanel } from "./components/CustomerSaaSPanel";
 import { FFmpegSetupModal } from "./components/FFmpegSetupModal";
 import { CreatorWorkspacePage } from "./components/CreatorWorkspacePage";
 import { GoogleYouTubeConnectionCenter } from "./components/GoogleYouTubeConnectionCenter";
@@ -133,7 +131,7 @@ import {
 } from "./lib/resourceManager";
 import "./App.css";
 
-type View = "dashboard" | "automation" | "autopilot_daemon" | "auto_shorts" | "retention_booster" | "ab_testing" | "voice_cloner" | "avatar" | "thumbnails" | "youtube_intelligence" | "content_planner" | "quality_control" | "agent" | "creator" | "projects" | "media" | "settings" | "providers" | "google_youtube" | "aws_cloud" | "research" | "scripts" | "storyboard" | "visuals" | "voice" | "subtitles" | "audio" | "timeline" | "export" | "seo" | "publish" | "analytics" | "license" | "customer_saas" | "admin_saas";
+type View = "dashboard" | "automation" | "autopilot_daemon" | "auto_shorts" | "retention_booster" | "ab_testing" | "voice_cloner" | "avatar" | "thumbnails" | "youtube_intelligence" | "content_planner" | "quality_control" | "agent" | "creator" | "projects" | "media" | "settings" | "providers" | "google_youtube" | "aws_cloud" | "research" | "scripts" | "storyboard" | "visuals" | "voice" | "subtitles" | "audio" | "timeline" | "export" | "seo" | "publish" | "analytics" | "license";
 type StorageState = "connecting" | "ready" | "error";
 export type UserMode = "beginner" | "creator" | "advanced";
 
@@ -202,8 +200,6 @@ const URDU_PAGE_TITLES: Record<string, string> = {
   publish: "یوٹیوب پبلشنگ",
   analytics: "اینالیٹکس و کارکردگی",
   license: "لائسنسنگ و پلانز",
-  customer_saas: "کسٹمر پورٹل",
-  admin_saas: "ایڈمن پورٹل",
   settings: "سیٹنگز",
 };
 
@@ -271,8 +267,6 @@ const ROMAN_URDU_PAGE_TITLES: Record<string, string> = {
   publish: "YouTube Publishing Studio",
   analytics: "Analytics aur Karkardagi",
   license: "Licensing aur Plans",
-  customer_saas: "Customer Portal",
-  admin_saas: "Admin SaaS Portal",
   settings: "Settings",
 };
 
@@ -322,10 +316,10 @@ export function getFilteredNavigation(mode: UserMode) {
   }
   if (mode === "creator") {
     return navigation.filter((item) =>
-      !["license", "customer_saas", "admin_saas", "analytics", "research", "providers"].includes(item.view)
+      !["license", "analytics", "research", "providers"].includes(item.view)
     );
   }
-  return items; // Advanced mode shows all (admin_saas only if isOwner)
+  return items; // Advanced mode shows all
 }
 
 const plannedNavigation = [
@@ -336,7 +330,7 @@ const plannedNavigation = [
 function App() {
   const [view, setView] = useState<View>("dashboard");
   const [projects, setProjects] = useState<Project[]>([]);
-  const { user: firebaseUser, isOwner } = useAuth();
+  const { user: firebaseUser } = useAuth();
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [isOnboardingOpen, setIsOnboardingOpen] = useState(false);
   const [storageState, setStorageState] = useState<StorageState>("connecting");
@@ -1592,10 +1586,6 @@ Please structure the script with the following sections:
             />
           ) : view === "license" ? (
             <LicensingStudioPage />
-          ) : view === "customer_saas" ? (
-            <CustomerSaaSPanel onNavigateToAwsConnection={() => setView("aws_cloud")} />
-          ) : (view === "admin_saas" && isOwner) ? (
-            <AdminSaaSPanel onNavigateToAwsConnection={() => setView("aws_cloud")} />
           ) : (
             <SettingsPage
               settings={studioSettings}
