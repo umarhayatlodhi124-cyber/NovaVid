@@ -1,5 +1,5 @@
 // NovaVid AI Studio — Protected Route Gate
-// Brand: LODHI TECHX
+// Brand: LODHI TECHX | Target Project: novavid-ecfc8
 
 import React from "react";
 import { useAuth } from "./AuthContext";
@@ -7,9 +7,27 @@ import { LoginPage } from "./LoginPage";
 import { RegisterPage } from "./RegisterPage";
 import { ForgotPasswordPage } from "./ForgotPasswordPage";
 import { EmailVerificationPage } from "./EmailVerificationPage";
+import { AdminSaaSPanel } from "../components/AdminSaaSPanel";
 
 export const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { authState, authView, logout } = useAuth();
+
+  // 1. Check if user is accessing the Dedicated Super Admin Portal (/admin or #admin)
+  // This allows the Super Admin portal to be hosted and accessible directly without touching regular studio flow.
+  const isDedicatedAdmin =
+    typeof window !== "undefined" &&
+    (window.location.pathname === "/admin" ||
+     window.location.pathname.startsWith("/admin/") ||
+     window.location.hash === "#admin" ||
+     window.location.search.includes("view=admin"));
+
+  if (isDedicatedAdmin) {
+    return (
+      <div style={{ minHeight: "100vh", backgroundColor: "#0b1120" }}>
+        <AdminSaaSPanel onNavigateToAwsConnection={() => { window.location.href = "/"; }} />
+      </div>
+    );
+  }
 
   if (authState === "INITIALIZING") {
     return (
@@ -37,7 +55,6 @@ export const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ childr
             fontSize: "1.75rem",
             marginBottom: "20px",
             boxShadow: "0 10px 25px -5px rgba(59, 130, 246, 0.5)",
-            animation: "pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite",
           }}
         >
           ⚡

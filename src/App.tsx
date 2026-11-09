@@ -308,14 +308,12 @@ export const navigation = [
   { label: "YouTube SEO", view: "seo" as const, icon: "search" },
   { label: "Publishing", view: "publish" as const, icon: "send" },
   { label: "Analytics", view: "analytics" as const, icon: "trend" },
-  { label: "Plans & Licensing", view: "license" as const, icon: "key" },
-  { label: "Customer SaaS", view: "customer_saas" as const, icon: "user" },
-  { label: "Admin SaaS", view: "admin_saas" as const, icon: "shield" },
+  { label: "Subscription & Plans", view: "license" as const, icon: "key" },
   { label: "Settings", view: "settings" as const, icon: "settings" },
 ];
 
-export function getFilteredNavigation(mode: UserMode, isOwner: boolean = false) {
-  const items = isOwner ? navigation : navigation.filter((item) => item.view !== "admin_saas");
+export function getFilteredNavigation(mode: UserMode) {
+  const items = navigation;
 
   if (mode === "beginner") {
     return items.filter((item) =>
@@ -778,7 +776,7 @@ function App() {
     ? (ROMAN_URDU_PAGE_TITLES[view] || englishPageTitle)
     : englishPageTitle;
 
-  const filteredNavigation = useMemo(() => getFilteredNavigation(userMode, isOwner), [userMode, isOwner]);
+  const filteredNavigation = useMemo(() => getFilteredNavigation(userMode), [userMode]);
 
   async function handleNativeMediaImport() {
     try {
