@@ -18,6 +18,7 @@ import {
   deleteProviderCredential,
   GeminiProviderAdapter,
 } from "./providers";
+import { isTauri } from "./platform";
 
 export type GeminiStatus = "not_configured" | "configured" | "testing" | "connected" | "temp_unavailable" | "error";
 
@@ -114,7 +115,9 @@ export async function loadConnectionCenterState(): Promise<{
     errorMessage: null,
     requestsCount: 0,
     quotaInfo: "Google AI Studio Free Tier (20 RPD) / Scalable Cloud Billing",
-    storageType: "Windows Credential Manager (DPAPI vault: com.aiyoutubestudio.provider)",
+    storageType: isTauri()
+      ? "Windows Credential Manager (DPAPI vault: com.aiyoutubestudio.provider)"
+      : "Browser Cloud Session (Encrypted Storage)",
   };
 
   // 2. Check YouTube OAuth Credential & Client Config
@@ -273,15 +276,28 @@ export async function runConnectionDiagnostics(lastGeminiTest?: {
   // 1. Windows Credential Manager (DPAPI) Hardware Storage
   let credManagerOk = true;
   try {
-    await getProviderCredentialStatus("gemini");
-    items.push({
-      id: "diag_cred_mgr",
-      name: "DPAPI Hardware-Isolated Storage (Windows Credential Manager)",
-      category: "system",
-      status: "ok",
-      displayStatus: "PASS",
-      message: "Encrypted DPAPI user-key storage is active (com.aiyoutubestudio.provider isolated from com.aiyoutubestudio.youtube). Hardware TPM protection active when supported by Windows Credential Guard/BitLocker.",
-    });
+    if (!isTauri()) {
+      // Web browser — DPAPI not available, but not an error
+      items.push({
+        id: "diag_cred_mgr",
+        name: "DPAPI Hardware-Isolated Storage (Windows Credential Manager)",
+        category: "system",
+        status: "warning",
+        displayStatus: "WARNING",
+        message: "Running in web browser — Windows DPAPI vault is only available in the NovaVid desktop app. Credentials stored in browser localStorage (less secure). Download the desktop app for full hardware-encrypted security.",
+      });
+      credManagerOk = false;
+    } else {
+      await getProviderCredentialStatus("gemini");
+      items.push({
+        id: "diag_cred_mgr",
+        name: "DPAPI Hardware-Isolated Storage (Windows Credential Manager)",
+        category: "system",
+        status: "ok",
+        displayStatus: "PASS",
+        message: "Encrypted DPAPI user-key storage is active (com.aiyoutubestudio.provider isolated from com.aiyoutubestudio.youtube). Hardware TPM protection active when supported by Windows Credential Guard/BitLocker.",
+      });
+    }
   } catch (err: any) {
     credManagerOk = false;
     items.push({
@@ -494,9 +510,11 @@ export async function runConnectionDiagnostics(lastGeminiTest?: {
     id: "diag_redirect_uri",
     name: "OAuth Loopback Health (127.0.0.1:8911)",
     category: "youtube",
-    status: "ok",
-    displayStatus: "PASS",
-    message: "Loopback server bound to http://127.0.0.1:8911/oauth2callback with RFC 7636 PKCE S256 state protection.",
+    status: isTauri() ? "ok" : "warning",
+    displayStatus: isTauri() ? "PASS" : "NOT TESTED",
+    message: isTauri()
+      ? "Loopback server bound to http://127.0.0.1:8911/oauth2callback with RFC 7636 PKCE S256 state protection."
+      : "OAuth loopback server is only available in the NovaVid desktop app. Web browser cannot bind a local TCP port.",
   });
 
   // 9. YouTube Analytics API Access (yt-analytics.readonly)

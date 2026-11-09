@@ -1,4 +1,11 @@
-import { invoke } from "@tauri-apps/api/core";
+import {
+  isTauri,
+  tauriInvoke,
+  webSaveCredential,
+  webGetCredential,
+  webDeleteCredential,
+  webCredentialExists,
+} from "./platform";
 
 export type ProviderName = "gemini" | "claude";
 export type ProviderStatus = "connected" | "disconnected" | "invalid_key" | "quota_exceeded" | "error";
@@ -68,15 +75,35 @@ export function validateProviderConfig(config: Partial<ProviderConfig>): Provide
 
 export async function saveProviderCredential(provider: ProviderName, credential: string): Promise<void> {
   if (!credential.trim() || credential.length > 4_096) throw new Error("Enter a valid provider credential.");
-  await invoke<void>("provider_save_credential", { provider, credential });
+  if (isTauri()) {
+    await tauriInvoke<void>("provider_save_credential", { provider, credential });
+  } else {
+    // Web fallback: store in localStorage with obfuscation
+    webSaveCredential(`provider_${provider}`, credential);
+  }
 }
 
 export function getProviderCredentialStatus(provider: ProviderName): Promise<boolean> {
-  return invoke<boolean>("provider_credential_status", { provider });
+  if (isTauri()) {
+    return tauriInvoke<boolean>("provider_credential_status", { provider });
+  }
+  // Web fallback
+  return Promise.resolve(webCredentialExists(`provider_${provider}`));
 }
 
 export async function deleteProviderCredential(provider: ProviderName): Promise<void> {
-  await invoke<void>("provider_delete_credential", { provider });
+  if (isTauri()) {
+    await tauriInvoke<void>("provider_delete_credential", { provider });
+  } else {
+    webDeleteCredential(`provider_${provider}`);
+  }
+}
+
+export async function getProviderCredential(provider: ProviderName): Promise<string | null> {
+  if (!isTauri()) {
+    return webGetCredential(`provider_${provider}`);
+  }
+  return null; // Desktop: credential is retrieved by Rust backend directly
 }
 
 export interface GeminiGenerationResult {
@@ -136,8 +163,39 @@ export class GeminiProviderAdapter {
     if (!config.credentialConfigured) {
       return { connected: false, status: "disconnected", message: "Save a Gemini credential in Windows Credential Manager before testing.", fallbackOccurred: false };
     }
+    if (!isTauri()) {
+      // Web: test directly against Gemini REST API using stored key
+      try {
+        const { getProviderCredential } = await import("./providers");
+        const apiKey = await getProviderCredential("gemini");
+        if (!apiKey) {
+          return { connected: false, status: "disconnected", message: "No Gemini API key found. Please save your key first.", fallbackOccurred: false };
+        }
+        const resp = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/${config.model}:generateContent?key=${apiKey}`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ contents: [{ parts: [{ text: "Hello. Reply with just: OK" }] }] }),
+          }
+        );
+        if (resp.ok) {
+          this.config = { ...config, status: "connected", lastError: null };
+          return { connected: true, status: "connected", message: "Gemini API connection verified successfully.", fallbackOccurred: false, modelUsed: config.model };
+        } else {
+          const err = await resp.text();
+          const st = classifyProviderErrorStatus(err);
+          this.config = { ...config, status: st, lastError: err };
+          return { connected: false, status: st, message: `Gemini API error (${resp.status}): ${err.slice(0, 200)}`, fallbackOccurred: false };
+        }
+      } catch (error) {
+        const message = safeNativeError(error);
+        this.config = { ...config, status: "error", lastError: message };
+        return { connected: false, status: "error", message, fallbackOccurred: false };
+      }
+    }
     try {
-      const result = await invoke<ProviderConnectionResult>("gemini_test_connection", {
+      const result = await tauriInvoke<ProviderConnectionResult>("gemini_test_connection", {
         model: config.model,
         requestId: crypto.randomUUID(),
         billingConfirmed,
@@ -165,7 +223,7 @@ export class GeminiProviderAdapter {
     if (!normalizedPrompt || normalizedPrompt.length > 100_000) throw new Error("The prompt is empty or exceeds the supported size.");
 
     try {
-      const text = await invoke<string>("gemini_generate_text", {
+      const text = await tauriInvoke<string>("gemini_generate_text", {
         request: {
           provider: "gemini",
           model: config.model,
@@ -215,7 +273,7 @@ export class GeminiProviderAdapter {
     if (!normalizedPrompt || normalizedPrompt.length > 100_000) throw new Error("The prompt is empty or exceeds the supported size.");
 
     try {
-      const raw = await invoke<GeminiGenerationResult | string>("gemini_generate_text_detailed", {
+      const raw = await tauriInvoke<GeminiGenerationResult | string>("gemini_generate_text_detailed", {
         request: {
           provider: "gemini",
           model: config.model,
@@ -257,7 +315,8 @@ export class GeminiProviderAdapter {
   }
 
   cancelGeneration(requestId: string): Promise<boolean> {
-    return invoke<boolean>("gemini_cancel_generation", { requestId });
+    if (!isTauri()) return Promise.resolve(false);
+    return tauriInvoke<boolean>("gemini_cancel_generation", { requestId });
   }
 }
 
@@ -281,7 +340,7 @@ export class ClaudeProviderAdapter {
       return { connected: false, status: "error", message: "Confirm the potentially billable Claude connection test before continuing.", fallbackOccurred: false };
     }
     try {
-      const result = await invoke<ProviderConnectionResult>("provider_test_connection", {
+      const result = await tauriInvoke<ProviderConnectionResult>("provider_test_connection", {
         provider: "claude",
         model: config.model,
         requestId: crypto.randomUUID(),
@@ -312,7 +371,7 @@ export class ClaudeProviderAdapter {
     }
 
     try {
-      const text = await invoke<string>("gemini_generate_text", {
+      const text = await tauriInvoke<string>("gemini_generate_text", {
         request: {
           provider: "claude",
           model: config.model,

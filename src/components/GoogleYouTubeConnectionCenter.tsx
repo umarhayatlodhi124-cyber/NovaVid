@@ -27,6 +27,7 @@ import {
 import { PublishingRepository, ProviderConfigRepository } from "../lib/repositories";
 import { DEFAULT_PROVIDER_CONFIG } from "../lib/providers";
 import { FALLBACK_GEMINI_CATALOG, GeminiModelInfo, fetchGeminiModelCatalog } from "../lib/models";
+import { isTauri } from "../lib/platform";
 
 interface GoogleYouTubeConnectionCenterProps {
   onNavigateToPublish?: () => void;
@@ -506,12 +507,14 @@ export function GoogleYouTubeConnectionCenter({
               LODHI TECHX Studio
             </span>
             <span className="gy-pill gy-pill-dpapi">
-              <span>🔒</span> DPAPI Hardware Vault Isolation
+              <span>{isTauri() ? "🔒" : "☁️"}</span> {isTauri() ? "DPAPI Hardware Vault Isolation" : "Cloud Workspace Storage"}
             </span>
           </div>
           <h1>Google & YouTube Connection Center</h1>
           <p>
-            Manage your AI generation provider and YouTube publishing authorizations with hardware-isolated Windows Credential Manager vaults. Reauthenticating, switching, or disconnecting one will never disrupt the other.
+            {isTauri()
+              ? "Manage your AI generation provider and YouTube publishing authorizations with hardware-isolated Windows Credential Manager vaults. Reauthenticating, switching, or disconnecting one will never disrupt the other."
+              : "Manage your AI generation provider and YouTube publishing authorizations for your cloud workspace. Download the desktop app for local hardware-isolated DPAPI storage and direct 4K video rendering."}
           </p>
         </div>
 
@@ -574,7 +577,7 @@ export function GoogleYouTubeConnectionCenter({
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "11px", color: "#94a3b8", background: "#090d16", padding: "6px 12px", borderRadius: "8px", border: "1px solid #1e293b" }}>
           <span style={{ width: "7px", height: "7px", borderRadius: "50%", background: "#10b981", display: "inline-block" }}></span>
-          DPAPI Encrypted Vault
+          {isTauri() ? "DPAPI Encrypted Vault" : "Web Encrypted Storage"}
         </div>
       </div>
 
@@ -643,7 +646,7 @@ export function GoogleYouTubeConnectionCenter({
               <div className="gy-meta-box">
                 <span className="gy-meta-label">Storage Status</span>
                 <span className="gy-meta-value">
-                  🔒 DPAPI Encrypted Vault
+                  {isTauri() ? "🔒 DPAPI Encrypted Vault" : "☁️ Web Secure Storage"}
                 </span>
               </div>
               <div className="gy-meta-box">

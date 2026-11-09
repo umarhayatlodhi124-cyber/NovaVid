@@ -1,4 +1,4 @@
-import { invoke } from "@tauri-apps/api/core";
+import { isTauri, tauriInvoke } from "./platform";
 
 export interface YouTubeChannelInfo {
   id: string;
@@ -81,7 +81,8 @@ export async function youtubeGetAuthUrl(
   clientId?: string,
   redirectUri: string = DEFAULT_REDIRECT_URI
 ): Promise<PkceSession> {
-  return await invoke<PkceSession>("youtube_get_auth_url", {
+  if (!isTauri()) throw new Error("DESKTOP_ONLY: YouTube OAuth loopback requires the NovaVid desktop app.");
+  return await tauriInvoke<PkceSession>("youtube_get_auth_url", {
     clientId: clientId?.trim() ? clientId.trim() : null,
     redirectUri,
   });
@@ -89,15 +90,26 @@ export async function youtubeGetAuthUrl(
 
 export async function youtubeGetCredentialStatus(): Promise<boolean> {
   try {
-    return await invoke<boolean>("youtube_get_credential_status");
+    if (!isTauri()) return false;
+    return await tauriInvoke<boolean>("youtube_get_credential_status");
   } catch {
     return false;
   }
 }
 
 export async function youtubeGetAuthState(): Promise<YouTubeAuthState> {
+  if (!isTauri()) {
+    return {
+      authenticated: false,
+      hasRefreshToken: false,
+      clientId: DEFAULT_CLIENT_ID,
+      redirectUri: DEFAULT_REDIRECT_URI,
+      channels: [],
+      lastError: undefined, // No error on web — just not available
+    };
+  }
   try {
-    return await invoke<YouTubeAuthState>("youtube_get_auth_state");
+    return await tauriInvoke<YouTubeAuthState>("youtube_get_auth_state");
   } catch (err: any) {
     return {
       authenticated: false,
@@ -111,76 +123,89 @@ export async function youtubeGetAuthState(): Promise<YouTubeAuthState> {
 }
 
 export async function youtubeLogout(): Promise<void> {
-  await invoke("youtube_logout");
+  if (!isTauri()) return;
+  await tauriInvoke("youtube_logout");
 }
 
 export async function youtubeRefreshChannel(): Promise<YouTubeAuthState> {
-  return await invoke<YouTubeAuthState>("youtube_refresh_channel");
+  if (!isTauri()) throw new Error("DESKTOP_ONLY: Channel refresh requires the NovaVid desktop app.");
+  return await tauriInvoke<YouTubeAuthState>("youtube_refresh_channel");
 }
 
 export async function youtubeSaveTokenData(token: OAuthTokenData): Promise<void> {
-  await invoke("youtube_save_token_data", { token });
+  if (!isTauri()) return;
+  await tauriInvoke("youtube_save_token_data", { token });
 }
 
 export async function youtubeSaveClientConfig(config: OAuthClientConfig): Promise<void> {
-  await invoke("youtube_save_client_config", { config });
+  if (!isTauri()) {
+    // Web: store in localStorage
+    localStorage.setItem("novavid_yt_client_config", JSON.stringify(config));
+    return;
+  }
+  await tauriInvoke("youtube_save_client_config", { config });
 }
 
 export async function youtubeGetClientConfig(): Promise<OAuthClientConfig | null> {
+  if (!isTauri()) {
+    try {
+      const raw = localStorage.getItem("novavid_yt_client_config");
+      return raw ? JSON.parse(raw) : null;
+    } catch {
+      return null;
+    }
+  }
   try {
-    return await invoke<OAuthClientConfig | null>("youtube_get_client_config_command");
+    return await tauriInvoke<OAuthClientConfig | null>("youtube_get_client_config_command");
   } catch {
     return null;
   }
 }
 
 export async function youtubeTestRefreshToken(): Promise<string> {
-  return await invoke<string>("youtube_test_refresh_token");
+  if (!isTauri()) throw new Error("DESKTOP_ONLY: Token refresh test requires the NovaVid desktop app.");
+  return await tauriInvoke<string>("youtube_test_refresh_token");
 }
 
 export async function youtubeTestAuthFlow(): Promise<string> {
-  return await invoke<string>("youtube_test_auth_flow");
+  if (!isTauri()) throw new Error("DESKTOP_ONLY: Auth flow test requires the NovaVid desktop app.");
+  return await tauriInvoke<string>("youtube_test_auth_flow");
 }
 
 export async function youtubeListenForAuthCode(session: PkceSession): Promise<OAuthTokenData> {
-  return await invoke<OAuthTokenData>("youtube_listen_for_auth_code", { session });
+  if (!isTauri()) throw new Error("DESKTOP_ONLY: OAuth loopback listener requires the NovaVid desktop app.");
+  return await tauriInvoke<OAuthTokenData>("youtube_listen_for_auth_code", { session });
 }
 
 export async function youtubeGetJobStatus(jobId: string): Promise<PublishJobStatus | null> {
   try {
-    return await invoke<PublishJobStatus | null>("youtube_get_job_status", { jobId });
+    if (!isTauri()) return null;
+    return await tauriInvoke<PublishJobStatus | null>("youtube_get_job_status", { jobId });
   } catch {
     return null;
   }
 }
 
 export async function youtubeCancelUpload(jobId: string): Promise<void> {
-  await invoke("youtube_cancel_upload", { jobId });
+  if (!isTauri()) return;
+  await tauriInvoke("youtube_cancel_upload", { jobId });
 }
 
 export async function youtubeGetChannels(): Promise<YouTubeChannelInfo[]> {
+  if (!isTauri()) return [];
   try {
-    return await invoke<YouTubeChannelInfo[]>("youtube_get_channels");
+    return await tauriInvoke<YouTubeChannelInfo[]>("youtube_get_channels");
   } catch (err) {
-    console.warn("Falling back to local channel profile:", err);
-    return [
-      {
-        id: "chan-default",
-        channelId: "UC_NovaVid_Official",
-        title: "NovaVid Studio Channel",
-        customUrl: "@novavid",
-        subscriberCount: 14200,
-        videoCount: 48,
-        isActive: true,
-      },
-    ];
+    console.warn("Falling back to empty channel list:", err);
+    return [];
   }
 }
 
 export async function youtubeStartUpload(
   request: PublishVideoRequest
 ): Promise<PublishJobStatus> {
-  return await invoke<PublishJobStatus>("youtube_start_upload", { request });
+  if (!isTauri()) throw new Error("DESKTOP_ONLY: YouTube upload requires the NovaVid desktop app.");
+  return await tauriInvoke<PublishJobStatus>("youtube_start_upload", { request });
 }
 
 // ==========================================
