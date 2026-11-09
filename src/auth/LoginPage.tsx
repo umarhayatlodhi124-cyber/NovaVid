@@ -6,23 +6,40 @@ import { useAuth } from "./AuthContext";
 
 export const LoginPage: React.FC = () => {
   const { login, loginWithGoogle, setAuthView, error, clearError } = useAuth();
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState("you@lodhitechx.com");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [localError, setLocalError] = useState<string | null>(null);
+
+  const isDesktop = typeof window !== "undefined" && Boolean((window as any).__TAURI_INTERNALS__ || (window as any).__TAURI__);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLocalError(null);
     clearError();
+    if (!email.trim()) {
+      setLocalError("Please enter your email address.");
+      return;
+    }
+    if (!password) {
+      setLocalError("Please enter your password.");
+      return;
+    }
     setLoading(true);
     try {
-      await login(email, password);
+      await login(email.trim(), password);
     } catch (err: any) {
       setLocalError(err?.message || "Failed to sign in");
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleAutoFill = () => {
+    setEmail("you@lodhitechx.com");
+    setPassword("TestPassword123!");
+    setLocalError(null);
+    clearError();
   };
 
   const handleGoogleLogin = async () => {
@@ -196,6 +213,24 @@ export const LoginPage: React.FC = () => {
           >
             {loading ? "Authenticating..." : "Sign In to Workspace"}
           </button>
+
+          <button
+            type="button"
+            onClick={handleAutoFill}
+            style={{
+              background: "rgba(59, 130, 246, 0.08)",
+              border: "1px dashed rgba(59, 130, 246, 0.4)",
+              borderRadius: "8px",
+              padding: "8px 12px",
+              color: "#93c5fd",
+              fontSize: "0.78rem",
+              fontWeight: 600,
+              cursor: "pointer",
+              transition: "all 0.2s",
+            }}
+          >
+            🔑 One-Click Fill: you@lodhitechx.com
+          </button>
         </form>
 
         <div style={{ position: "relative", textAlign: "center", margin: "24px 0" }}>
@@ -235,11 +270,18 @@ export const LoginPage: React.FC = () => {
             alignItems: "center",
             justifyContent: "center",
             gap: "10px",
-            marginBottom: "20px",
+            marginBottom: "12px",
+            opacity: isDesktop ? 0.7 : 1,
           }}
         >
-          <span>🌐</span> Sign in with Google
+          <span>🌐</span> Sign in with Google {isDesktop && "(Web Only)"}
         </button>
+
+        {isDesktop && (
+          <p style={{ textAlign: "center", fontSize: "0.75rem", color: "#6b7280", margin: "0 0 16px" }}>
+            Desktop Note: Please use Email & Password above to sign into your desktop workspace.
+          </p>
+        )}
 
         <div style={{ textAlign: "center", fontSize: "0.85rem", color: "#9ca3af" }}>
           Don't have an account?{" "}

@@ -130,3 +130,4 @@ Low audio volume is solved by enforcing YouTube's exact broadcast target:
 2. Verify production bundle build (`npm run build`).
 3. Commit all intelligence modules and PRD to branch `phase-13-16-commercial-launch`.
 4. Provide the user with an actionable summary and guidance on running the high-quality autopilot pipeline in their desktop studio.
+

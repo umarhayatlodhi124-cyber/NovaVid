@@ -9,6 +9,7 @@ import {
   browserLocalPersistence,
   indexedDBLocalPersistence,
   inMemoryPersistence,
+  browserPopupRedirectResolver,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   signOut,
@@ -59,6 +60,7 @@ function initializeFirebaseAuth(): Auth {
       persistence: typeof window !== "undefined"
         ? [browserLocalPersistence, indexedDBLocalPersistence, inMemoryPersistence]
         : inMemoryPersistence,
+      popupRedirectResolver: typeof window !== "undefined" ? browserPopupRedirectResolver : undefined,
     });
   } catch {
     return getAuth(app);

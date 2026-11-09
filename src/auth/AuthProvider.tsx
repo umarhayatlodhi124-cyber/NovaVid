@@ -90,6 +90,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         msg = "Access temporarily blocked due to multiple failed attempts. Try again later or reset password.";
       } else if (err?.code === "auth/internal-error" || msg.includes("auth/internal-error")) {
         msg = "Invalid email or password. If you don't have an account yet, click 'Create an Account' below to sign up.";
+      } else if (err?.code === "auth/argument-error" || msg.includes("auth/argument-error") || err?.code === "auth/invalid-email") {
+        msg = "Invalid email format or empty field. Please enter a valid email and password.";
       } else if (err?.code === "auth/network-request-failed") {
         msg = "Network connection failed. Please check your internet connection and try again.";
       }
@@ -127,13 +129,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const loginWithGoogle = async () => {
     setError(null);
     try {
+      const isDesktop = typeof window !== "undefined" && Boolean((window as any).__TAURI_INTERNALS__ || (window as any).__TAURI__);
+      if (isDesktop) {
+        throw new Error("Google sign-in popup is not supported in the desktop app. Please sign in with your email address and password above.");
+      }
       const res = await loginWithGoogleAuth();
       setUser(res.user);
       setProfile(res.profile);
       setAuthState("SIGNED_IN");
     } catch (err: any) {
       console.error("Google sign in failed:", err);
-      const msg = err?.message || "Google sign in failed.";
+      let msg = err?.message || "Google sign in failed.";
+      if (err?.code === "auth/argument-error" || msg.includes("auth/argument-error") || msg.includes("disallowed_useragent") || err?.code === "auth/popup-blocked") {
+        msg = "Google sign-in is not supported in desktop mode. Please sign in with your email address and password above.";
+      }
       setError(msg);
       throw new Error(msg);
     }
